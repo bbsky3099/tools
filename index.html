@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>媒体工具中心 - Media Tools Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* 主色调 */
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3f37c9;
+            
+            /* 辅助色 */
+            --secondary: #f72585;
+            --success: #4cc9f0;
+            --warning: #f8961e;
+            --danger: #ef233c;
+            
+            /* 中性色 */
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --gray-light: #e9ecef;
+            
+            /* 间距 */
+            --spacing: 1rem;
+            --spacing-lg: 2rem;
+            --spacing-xl: 3rem;
+            
+            /* 圆角 */
+            --radius: 0.5rem;
+            --radius-lg: 1rem;
+            
+            /* 阴影 */
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+            
+            /* 过渡 */
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        /* 布局容器 */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing);
+        }
+        
+        /* 页眉样式 */
+        header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+            padding: var(--spacing-lg) 0;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing);
+        }
+        
+        .logo i {
+            font-size: 3rem;
+        }
+        
+        .tagline {
+            color: var(--gray);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* 工具分类导航 */
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: var(--spacing);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .category-btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 2rem;
+            background: var(--gray-light);
+            color: var(--dark);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+        
+        .category-btn:hover,
+        .category-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* 工具网格布局 */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        /* 工具卡片样式 */
+        .tool-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .tool-card-header {
+            padding: var(--spacing);
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing);
+        }
+        
+        .tool-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .tool-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .tool-card-body {
+            padding: var(--spacing);
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .tool-description {
+            margin-bottom: var(--spacing);
+            color: var(--gray);
+            flex-grow: 1;
+        }
+        
+        .tool-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        /* 按颜色分类的工具卡片 */
+        .tool-card.image {
+            --card-color: var(--primary);
+        }
+        
+        .tool-card.video {
+            --card-color: var(--secondary);
+        }
+        
+        .tool-card.audio {
+            --card-color: var(--success);
+        }
+        
+        .tool-card.document {
+            --card-color: var(--warning);
+        }
+        
+        .tool-card.archive {
+            --card-color: var(--danger);
+        }
+        
+        .tool-card-header {
+            background: var(--card-color, var(--primary));
+        }
+        
+        /* 页脚样式 */
+        footer {
+            text-align: center;
+            padding: var(--spacing-lg) 0;
+            color: var(--gray);
+            border-top: 1px solid var(--gray-light);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .tools-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .category-nav {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+        
+        /* 新增工具提示 */
+        .new-badge {
+            background: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 1rem;
+            margin-left: 0.5rem;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-tools"></i>
+                <span>媒体工具中心</span>
+            </div>
+            <p class="tagline">一站式解决您的所有媒体处理需求 - 简单、高效、专业</p>
+        </header>
+        
+        <!-- 工具分类导航 -->
+        <nav class="category-nav">
+            <button class="category-btn active">全部工具</button>
+            <button class="category-btn">图片处理</button>
+            <button class="category-btn">视频处理</button>
+            <button class="category-btn">音频处理</button>
+            <button class="category-btn">文档转换</button>
+        </nav>
+        
+        <!-- 工具卡片网格 -->
+        <div class="tools-grid">
+            <!-- 图片工具 -->
+            <a href="image-resizer.html" class="tool-card image">
+                <div class="tool-card-header">
+                    <div class="tool-icon">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <h3 class="tool-title">图片处理工具</h3>
+                </div>
+                <div class="tool-card-body">
+                    <p class="tool-description">调整图片大小、格式转换、压缩优化，支持JPG、PNG、GIF等多种格式</p>
+                    <div class="tool-meta">
+                        <span><i class="fas fa-clock"></i> 快速处理</span>
+                        <span><i class="fas fa-star"></i> 热门工具</span>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- 视频工具 -->
+            <a href="vido-resizer.html" class="tool-card video">
+                <div class="tool-card-header">
+                    <div class="tool-icon">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <h3 class="tool-title">视频处理工具</h3>
+                </div>
+                <div class="tool-card-body">
+                    <p class="tool-description">转换视频格式、调整分辨率、压缩体积，支持MP4、AVI、MOV等格式</p>
+                    <div class="tool-meta">
+                        <span><i class="fas fa-bolt"></i> 高速转换</span>
+                        <span><i class="fas fa-user-plus"></i> 新用户推荐</span>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- 预留位置 - 未来可添加的音频工具 -->
+            <a href="audio-converter.html" class="tool-card audio">
+                <div class="tool-card-header">
+                    <div class="tool-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <h3 class="tool-title">音频转换工具 <span class="new-badge">NEW</span></h3>
+                </div>
+                <div class="tool-card-body">
+                    <p class="tool-description">转换音频格式、调整音质、剪辑音频片段，支持MP3、WAV、AAC等格式</p>
+                    <div class="tool-meta">
+                        <span><i class="fas fa-headphones"></i> 高品质</span>
+                        <span><i class="fas fa-fire"></i> 最新上线</span>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- 预留位置 - 未来可添加的PDF工具 -->
+            <a href="pdf-tools.html" class="tool-card document">
+                <div class="tool-card-header">
+                    <div class="tool-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h3 class="tool-title">PDF处理工具</h3>
+                </div>
+                <div class="tool-card-body">
+                    <p class="tool-description">PDF转换、合并、拆分、压缩，支持与Word、Excel、PPT互转</p>
+                    <div class="tool-meta">
+                        <span><i class="fas fa-file-alt"></i> 文档处理</span>
+                        <span><i class="fas fa-crown"></i> 专业版</span>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- 预留位置 - 未来可添加的压缩工具 -->
+            <a href="archive-tools.html" class="tool-card archive">
+                <div class="tool-card-header">
+                    <div class="tool-icon">
+                        <i class="fas fa-file-archive"></i>
+                    </div>
+                    <h3 class="tool-title">压缩解压工具 <span class="new-badge">COMING</span></h3>
+                </div>
+                <div class="tool-card-body">
+                    <p class="tool-description">文件压缩与解压，支持ZIP、RAR、7Z等多种压缩格式</p>
+                    <div class="tool-meta">
+                        <span><i class="fas fa-box-open"></i> 即将上线</span>
+                        <span><i class="fas fa-bell"></i> 敬请期待</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <footer>
+            <p>© 2023 媒体工具中心 | 持续更新中 | <a href="about.html" style="color: var(--primary);">关于我们</a></p>
+        </footer>
+    </div>
+    
+    <script>
+        // 简单的分类筛选功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const categoryBtns = document.querySelectorAll('.category-btn');
+            const toolCards = document.querySelectorAll('.tool-card');
+            
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 更新活动按钮样式
+                    categoryBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const category = this.textContent.trim();
+                    
+                    // 筛选工具卡片
+                    toolCards.forEach(card => {
+                        if (category === '全部工具') {
+                            card.style.display = 'flex';
+                        } else {
+                            const cardCategory = card.classList.contains('image') ? '图片处理' :
+                                                card.classList.contains('video') ? '视频处理' :
+                                                card.classList.contains('audio') ? '音频处理' :
+                                                card.classList.contains('document') ? '文档转换' : '';
+                            
+                            if (cardCategory === category) {
+                                card.style.display = 'flex';
+                            } else {
+                                card.style.display = 'none';
+                            }
+                        }
+                    });
+                });
+            });
+            
+            // 可以在这里添加更多交互功能
+            console.log('媒体工具中心已加载，欢迎使用！');
+        });
+    </script>
+</body>
+</html>
