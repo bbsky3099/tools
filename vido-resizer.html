@@ -440,7 +440,7 @@
     </div>
 
     <!-- 使用更新的 FFmpeg.js 版本 -->
-   <script src="assets/ffmpeg/ffmpeg.min.js"></script>
+   <script src="/tools/assets/ffmpeg/ffmpeg.min.js"></script>
     
     <script>
         // 显示加载覆盖层
@@ -459,9 +459,9 @@
         const { createFFmpeg, fetchFile } = FFmpeg;
         const ffmpeg = createFFmpeg({ 
                log: true,
-               corePath: './assets/ffmpeg/ffmpeg-core.js',
-               wasmPath: './assets/ffmpeg/ffmpeg-core.wasm',
-               workerPath: './assets/ffmpeg/ffmpeg-core.worker.js'
+               corePath: '/tools/assets/ffmpeg/ffmpeg-core.js',
+               wasmPath: '/tools/assets/ffmpeg/ffmpeg-core.wasm',
+               workerPath: '/tools/assets/ffmpeg/ffmpeg-core.worker.js'
          });
 
         // 预加载FFmpeg核心
