@@ -458,9 +458,11 @@
         // 初始化FFmpeg
         const { createFFmpeg, fetchFile } = FFmpeg;
         const ffmpeg = createFFmpeg({ 
-            log: true,
-            corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
-        });
+               log: true,
+               corePath: './assets/ffmpeg/ffmpeg-core.js',
+               wasmPath: './assets/ffmpeg/ffmpeg-core.wasm',
+               workerPath: './assets/ffmpeg/ffmpeg-core.worker.js'
+         });
 
         // 预加载FFmpeg核心
         async function preloadFFmpeg() {
