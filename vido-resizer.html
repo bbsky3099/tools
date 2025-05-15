@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>视频尺寸及格式转换工具</title>
     <!-- 本地加载JSZip库 -->
-    <script src="jszip.min.js"></script>
+    <script src="/tools/jszip.min.js"></script>
     <!-- 本地加载FFmpeg库 -->
-    <script src="public/ffmpeg/ffmpeg-core.min.js"></script>
+    <script src="/tools/public/ffmpeg/ffmpeg-core.min.js"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -634,7 +634,7 @@
             totalSize: 0
         };
 
-        // 初始化FFmpeg
+// 初始化FFmpeg
 async function initFFmpeg() {
   if (typeof FFmpeg === 'undefined') {
     showFFmpegError('FFmpeg库未加载');
@@ -645,14 +645,12 @@ async function initFFmpeg() {
     const { createFFmpeg } = window.FFmpeg;
     state.ffmpeg = createFFmpeg({
       log: true,
-      corePath: 'public/ffmpeg/ffmpeg-core.js',   // 直接指向文件
-      wasmPath: 'public/ffmpeg/ffmpeg-core.wasm'  // 直接指向文件
+      corePath: '/tools/public/ffmpeg/ffmpeg-core.js',
+      wasmPath: '/tools/public/ffmpeg/ffmpeg-core.wasm'
     });
 
-    showStatus('正在加载FFmpeg引擎...');
     await state.ffmpeg.load();
     state.ffmpegLoaded = true;
-    document.getElementById('noFfmpegWarning').style.display = 'none';
   } catch (error) {
     showFFmpegError(`初始化失败: ${error.message}`);
   }
