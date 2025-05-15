@@ -635,28 +635,28 @@
         };
 
         // 初始化FFmpeg
-        async function initFFmpeg() {
-            if (typeof FFmpeg === 'undefined') {
-                showFFmpegError('FFmpeg库未加载');
-                return;
-            }
+async function initFFmpeg() {
+  if (typeof FFmpeg === 'undefined') {
+    showFFmpegError('FFmpeg库未加载');
+    return;
+  }
 
-            try {
-                const { createFFmpeg } = window.FFmpeg;
-                state.ffmpeg = createFFmpeg({
-                    log: true,
-                    corePath: 'public/ffmpeg/ffmpeg-core.js',
-                    wasmPath: 'public/ffmpeg/ffmpeg-core.wasm',
-                });
+  try {
+    const { createFFmpeg } = window.FFmpeg;
+    state.ffmpeg = createFFmpeg({
+      log: true,
+      corePath: 'public/ffmpeg/ffmpeg-core.js',   // 直接指向文件
+      wasmPath: 'public/ffmpeg/ffmpeg-core.wasm'  // 直接指向文件
+    });
 
-                showStatus('正在加载FFmpeg引擎...');
-                await state.ffmpeg.load();
-                state.ffmpegLoaded = true;
-                document.getElementById('noFfmpegWarning').style.display = 'none';
-            } catch (error) {
-                showFFmpegError(`初始化失败: ${error.message}`);
-            }
-        }
+    showStatus('正在加载FFmpeg引擎...');
+    await state.ffmpeg.load();
+    state.ffmpegLoaded = true;
+    document.getElementById('noFfmpegWarning').style.display = 'none';
+  } catch (error) {
+    showFFmpegError(`初始化失败: ${error.message}`);
+  }
+}
 
         // 工具函数：显示错误
         function showFFmpegError(message) {
