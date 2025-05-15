@@ -7,7 +7,7 @@
     <!-- 本地加载JSZip库 -->
     <script src="jszip.min.js"></script>
     <!-- 本地加载FFmpeg库 -->
-   <script type="module" src="/public/ffmpeg/ffmpeg-core.min.js"></script>
+   <script type="module" src="public/ffmpeg/ffmpeg-core.min.js"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -643,8 +643,8 @@ async function initFFmpeg() {
   try {
     const { createFFmpeg } = window.FFmpeg;
     const ffmpeg = createFFmpeg({
-      corePath: '/public/ffmpeg/ffmpeg-core.js',
-      wasmPath: '/public/ffmpeg/ffmpeg-core.wasm',
+      corePath: 'public/ffmpeg/ffmpeg-core.js',
+      wasmPath: 'public/ffmpeg/ffmpeg-core.wasm',
     });
     await ffmpeg.load();
     state.ffmpeg = ffmpeg; // 存储 ffmpeg 实例到状态
