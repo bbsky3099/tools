@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>视频尺寸及格式转换工具</title>
+    <!-- 本地加载JSZip库 -->
+    <script src="jszip.min.js"></script>
+    <!-- 本地加载FFmpeg库 -->
+    <script src="public/ffmpeg/ffmpeg-core.min.js"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -38,11 +42,6 @@
             margin-bottom: 30px;
             font-weight: 600;
             font-size: 2.2rem;
-            background: linear-gradient(to right, #3498db, #2ecc71);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         
         .container {
@@ -206,7 +205,7 @@
         }
         
         select {
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='<url id="" type="url" status="" title="" wc="">http://www.w3.org/2000/svg</url> ' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right 10px center;
             background-size: 16px;
@@ -435,6 +434,50 @@
             visibility: visible;
             opacity: 1;
         }
+        
+        /* 暗黑模式样式 */
+        body.dark-mode {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #f0f0f0;
+        }
+        
+        body.dark-mode .container {
+            background-color: #2d2d2d;
+            border-color: #444;
+        }
+        
+        body.dark-mode .upload-area {
+            background-color: #333;
+            border-color: #444;
+        }
+        
+        body.dark-mode .instructions {
+            border-color: #444;
+        }
+        
+        body.dark-mode .instructions-header {
+            background: linear-gradient(to right, #333, #444);
+            color: #f0f0f0;
+        }
+        
+        body.dark-mode .instructions-content {
+            background-color: #333;
+        }
+        
+        body.dark-mode .video-card {
+            background-color: #333;
+            border-color: #444;
+        }
+        
+        body.dark-mode input, body.dark-mode select {
+            background-color: #444;
+            color: #f0f0f0;
+            border-color: #555;
+        }
+        
+        body.dark-mode label {
+            color: #f0f0f0;
+        }
     </style>
 </head>
 <body>
@@ -474,8 +517,8 @@
                     </li>
                     <li><strong>处理视频</strong>：
                         <ul>
-                            <li>点击单个视频的"调整"按钮处理单个视频</li>
-                            <li>点击"调整所有视频"按钮批量处理所有上传视频</li>
+                            <li>点击单个视频的"处理"按钮处理单个视频</li>
+                            <li>点击"处理所有视频"按钮批量处理所有上传视频</li>
                         </ul>
                     </li>
                     <li><strong>下载视频</strong>：
@@ -538,7 +581,7 @@
                     <path d="M21 12H9"></path>
                     <path d="M12 3v18"></path>
                 </svg>
-                调整所有视频
+                处理所有视频
             </button>
             <button id="downloadAllBtn" disabled>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
@@ -557,7 +600,7 @@
             </button>
         </div>
         
-        <div class="progress-container" style="display: none;">
+        <div class="progress-container" id="progressContainer" style="display: none;">
             <div class="status">正在处理...</div>
             <div class="progress-bar">
                 <div class="progress"></div>
@@ -572,62 +615,323 @@
         <div id="previewContainer" class="preview-container"></div>
     </div>
 
-    <!-- 本地加载JSZip库 -->
-    <script src="jszip.min.js"></script>
-    <!-- 本地加载FFmpeg库 -->
-    <script src="assets/ffmpeg/ffmpeg.min.js"></script>
-    
     <script>
-        // 检查FFmpeg是否加载成功
-        const ffmpegAvailable = typeof FFmpeg !== 'undefined';
-        if (!ffmpegAvailable) {
-            document.getElementById('noFfmpegWarning').style.display = 'block';
+        // 全局状态管理
+        const state = {
+            ffmpeg: null,
+            ffmpegLoaded: false,
+            processingQueue: [],
+            activeTasks: 0,
+            maxConcurrent: 2, // 最大并行任务数
+            taskTimeout: 120000, // 单个任务超时时间(2分钟)
+            videos: []
+        };
+
+        // 性能监控指标
+        const perfMetrics = {
+            startTime: null,
+            processedCount: 0,
+            totalSize: 0
+        };
+
+        // 初始化FFmpeg
+        async function initFFmpeg() {
+            if (typeof FFmpeg === 'undefined') {
+                showFFmpegError('FFmpeg库未加载');
+                return;
+            }
+
+            try {
+                const { createFFmpeg } = window.FFmpeg;
+                state.ffmpeg = createFFmpeg({
+                    log: true,
+                    corePath: 'public/ffmpeg/ffmpeg-core.js',
+                    wasmPath: 'public/ffmpeg/ffmpeg-core.wasm',
+                });
+
+                showStatus('正在加载FFmpeg引擎...');
+                await state.ffmpeg.load();
+                state.ffmpegLoaded = true;
+                document.getElementById('noFfmpegWarning').style.display = 'none';
+            } catch (error) {
+                showFFmpegError(`初始化失败: ${error.message}`);
+            }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // 功能说明面板的展开/折叠功能
-            const instructionsToggle = document.getElementById('instructionsToggle');
-            const instructionsContent = document.getElementById('instructionsContent');
+        // 工具函数：显示错误
+        function showFFmpegError(message) {
+            const warningEl = document.getElementById('noFfmpegWarning');
+            warningEl.textContent = `FFmpeg错误: ${message}`;
+            warningEl.style.display = 'block';
+        }
+
+        // 工具函数：更新状态
+        function showStatus(message, progress = null) {
+            const statusEl = document.getElementById('statusText');
+            statusEl.textContent = message;
             
-            instructionsToggle.addEventListener('click', function() {
-                instructionsContent.classList.toggle('show');
-                const arrow = this.querySelector('span:last-child');
-                arrow.textContent = instructionsContent.classList.contains('show') ? '▲' : '▼';
-                
-                // 如果展开后内容被截断，滚动到可见区域
-                if (instructionsContent.classList.contains('show')) {
-                    instructionsContent.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
+            if (progress !== null) {
+                const progressEl = document.querySelector('.progress');
+                progressEl.style.width = `${progress}%`;
+            }
+        }
+
+        // 工具函数：格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            const exp = Math.floor(Math.log(bytes) / Math.log(1024));
+            return `${(bytes / Math.pow(1024, exp)).toFixed(2)} ${units[exp]}`;
+        }
+
+        // 工具函数：格式化时长
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor(seconds % 3600 / 60);
+            const s = Math.floor(seconds % 60);
+            return [h, m, s]
+                .map(v => v.toString().padStart(2, '0'))
+                .filter((v,i) => v !== '00' || i > 0)
+                .join(':');
+        }
+
+        // 带超时的任务处理器
+        async function processWithTimeout(taskPromise, timeout) {
+            let timeoutHandle;
+            const timeoutPromise = new Promise((_, reject) => {
+                timeoutHandle = setTimeout(() => {
+                    reject(new Error(`操作超时（${timeout/1000}秒）`));
+                }, timeout);
             });
 
-            // 获取DOM元素
-            const fileInput = document.getElementById('fileInput');
-            const uploadArea = document.getElementById('uploadArea');
-            const previewContainer = document.getElementById('previewContainer');
-            const widthInput = document.getElementById('widthInput');
-            const heightInput = document.getElementById('heightInput');
-            const resizeMethod = document.getElementById('resizeMethod');
-            const formatSelect = document.getElementById('formatSelect');
-            const qualityInput = document.getElementById('qualityInput');
-            const qualityValue = document.getElementById('qualityValue');
-            const resizeAllBtn = document.getElementById('resizeAllBtn');
-            const downloadAllBtn = document.getElementById('downloadAllBtn');
-            const clearAllBtn = document.getElementById('clearAllBtn');
-            const progressContainer = document.querySelector('.progress-container');
-            const progressBar = document.querySelector('.progress');
-            const statusText = document.getElementById('statusText');
+            try {
+                return await Promise.race([taskPromise, timeoutPromise]);
+            } finally {
+                clearTimeout(timeoutHandle);
+            }
+        }
+
+        // 视频处理队列
+        async function processQueue() {
+            while (state.processingQueue.length > 0 && state.activeTasks < state.maxConcurrent) {
+                state.activeTasks++;
+                const { index, resolve, reject } = state.processingQueue.shift();
+                
+                try {
+                    const result = await processWithTimeout(
+                        processVideo(index),
+                        state.taskTimeout
+                    );
+                    resolve(result);
+                } catch (error) {
+                    reject(error);
+                } finally {
+                    state.activeTasks--;
+                    processQueue();
+                }
+            }
+        }
+
+        // 核心视频处理逻辑
+        async function processVideo(index) {
+            const startTime = Date.now();
+            const video = state.videos[index];
             
-            let videos = [];
+            try {
+                // 准备文件
+                showStatus(`[${index+1}/${state.videos.length}] 正在读取 ${video.file.name}...`);
+                const fileBuffer = new Uint8Array(await video.file.arrayBuffer());
+                
+                // 写入FFmpeg
+                showStatus(`[${index+1}/${state.videos.length}] 准备处理 ${video.file.name}...`);
+                await state.ffmpeg.FS('writeFile', video.file.name, fileBuffer);
+
+                // 构建命令
+                const outputExt = getOutputExtension(video);
+                const outputName = generateOutputFilename(video, outputExt);
+                const command = buildFFmpegCommand(video, outputName);
+
+                // 执行命令
+                showStatus(`[${index+1}/${state.videos.length}] 正在处理 ${video.file.name}...`);
+                await state.ffmpeg.run(...command);
+
+                // 读取结果
+                showStatus(`[${index+1}/${state.videos.length}] 正在保存 ${outputName}...`);
+                const outputData = state.ffmpeg.FS('readFile', outputName);
+                
+                // 创建Blob
+                const blob = new Blob([outputData.buffer], { type: `video/${outputExt}` });
+                const duration = Date.now() - startTime;
+
+                // 更新状态
+                state.videos[index] = {
+                    ...video,
+                    resizedData: URL.createObjectURL(blob),
+                    resizedFile: new File([blob], outputName, { type: blob.type }),
+                    processingTime: duration
+                };
+
+                // 清理
+                state.ffmpeg.FS('unlink', video.file.name);
+                state.ffmpeg.FS('unlink', outputName);
+
+                // 更新性能统计
+                perfMetrics.processedCount++;
+                perfMetrics.totalSize += blob.size;
+
+                return true;
+            } catch (error) {
+                console.error(`处理失败: ${video.file.name}`, error);
+                showStatus(`处理失败: ${video.file.name} - ${error.message}`);
+                return false;
+            }
+        }
+
+        // 构建FFmpeg命令
+        function buildFFmpegCommand(video, outputName) {
+            const { width, height, method, quality } = getProcessingParams();
             
-            // 更新质量显示值
-            qualityInput.addEventListener('input', function() {
-                qualityValue.textContent = `${this.value}%`;
+            const command = ['-i', video.file.name];
+            const filters = [];
+
+            // 缩放处理
+            if (width || height) {
+                const scaleFilter = method === 'contain' 
+                    ? `scale=w=${width||-1}:h=${height||-1}:force_original_aspect_ratio=decrease` 
+                    : `scale=${width||-1}:${height||-1}`;
+                filters.push(scaleFilter);
+            }
+
+            if (filters.length > 0) {
+                command.push('-vf', filters.join(','));
+            }
+
+            // 输出参数
+            command.push(
+                '-crf', quality.toString(),
+                '-preset', 'medium',
+                '-movflags', '+faststart',
+                '-y',
+                outputName
+            );
+
+            return command;
+        }
+
+        // 获取处理参数
+        function getProcessingParams() {
+            return {
+                width: parseInt(document.getElementById('widthInput').value) || null,
+                height: parseInt(document.getElementById('heightInput').value) || null,
+                method: document.getElementById('resizeMethod').value,
+                quality: parseInt(document.getElementById('qualityInput').value)
+            };
+        }
+
+        // 生成输出文件名
+        function generateOutputFilename(video, ext) {
+            const baseName = video.file.name.replace(/\.[^/.]+$/, '');
+            return `${baseName}_${Date.now()}.${ext}`;
+        }
+
+        // 获取输出扩展名
+        function getOutputExtension(video) {
+            const format = document.getElementById('formatSelect').value;
+            return format === 'original' 
+                ? video.file.name.split('.').pop() 
+                : format;
+        }
+
+        // 用户界面更新函数
+        function updateProgressUI() {
+            if (state.videos.length === 0) return;
+            
+            const progress = (perfMetrics.processedCount / state.videos.length) * 100;
+            showStatus(
+                `已处理 ${perfMetrics.processedCount}/${state.videos.length} 个文件 | ` +
+                `总大小: ${formatFileSize(perfMetrics.totalSize)} | ` +
+                `已用时间: ${formatDuration((Date.now() - perfMetrics.startTime)/1000)}`,
+                progress
+            );
+
+            // 更新每个视频卡片的状态
+            state.videos.forEach((video, index) => {
+                const card = document.querySelectorAll('.video-card')[index];
+                if (card) {
+                    const statusEl = card.querySelector('.processing-status');
+                    if (video.processingTime) {
+                        statusEl.textContent = `处理时间: ${video.processingTime}ms`;
+                    }
+                }
             });
+        }
+
+        // 主处理函数
+        async function handleProcessAll() {
+            if (!state.ffmpegLoaded) {
+                showStatus('FFmpeg引擎未就绪');
+                return;
+            }
+
+            // 初始化性能统计
+            perfMetrics.startTime = Date.now();
+            perfMetrics.processedCount = 0;
+            perfMetrics.totalSize = 0;
+
+            // 显示进度条
+            document.getElementById('progressContainer').style.display = 'block';
+
+            // 禁用按钮
+            document.querySelectorAll('button').forEach(btn => btn.disabled = true);
             
-            // 上传区域点击事件
+            try {
+                // 创建处理队列
+                state.processingQueue = state.videos.map((_, index) => ({
+                    index,
+                    promise: new Promise((resolve, reject) => {
+                        // 这里不需要再次推入队列，已经在初始化时完成
+                    })
+                }));
+
+                // 启动处理
+                showStatus('开始批量处理...', 0);
+                processQueue();
+
+                // 启动UI更新循环
+                const uiInterval = setInterval(updateProgressUI, 1000);
+
+                // 等待所有任务完成
+                await Promise.all(state.videos.map((video, index) => 
+                    new Promise((resolve, reject) => {
+                        state.processingQueue.push({ index, resolve, reject });
+                    })
+                ));
+                
+                clearInterval(uiInterval);
+                showStatus(`处理完成！总用时: ${formatDuration((Date.now() - perfMetrics.startTime)/1000)}`, 100);
+            } catch (error) {
+                console.error('批量处理失败:', error);
+                showStatus(`处理失败: ${error.message}`);
+            } finally {
+                // 恢复按钮
+                document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                document.getElementById('downloadAllBtn').disabled = false;
+                document.getElementById('clearAllBtn').disabled = false;
+            }
+        }
+
+        // 初始化事件监听
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 初始化FFmpeg
+            await initFFmpeg();
+
+            // 初始化UI组件
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            // 文件上传处理
             uploadArea.addEventListener('click', () => fileInput.click());
             
-            // 拖放功能
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 uploadArea.classList.add('active');
@@ -640,431 +944,92 @@
             uploadArea.addEventListener('drop', (e) => {
                 e.preventDefault();
                 uploadArea.classList.remove('active');
-                handleFiles(e.dataTransfer.files);
-            });
-            
-            // 文件选择事件
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length > 0) {
-                    handleFiles(fileInput.files);
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileInput.dispatchEvent(new Event('change'));
                 }
             });
             
-            // 处理上传的文件
-            function handleFiles(files) {
-                const videoFiles = Array.from(files).filter(file => file.type.startsWith('video/'));
-                
-                if (videoFiles.length === 0) {
-                    statusText.textContent = '没有选择有效的视频文件';
+            fileInput.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                if (files.length > 5) {
+                    alert('每次最多只能上传5个视频，请减少文件数量。');
                     return;
                 }
-                
-                statusText.textContent = `正在加载 ${videoFiles.length} 个视频...`;
-                
-                let loadedCount = 0;
-                videoFiles.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const video = document.createElement('video');
-                        video.onload = () => {
-                            // 获取视频元数据
-                            video.addEventListener('loadedmetadata', () => {
-                                videos.push({
-                                    file: file,
-                                    originalData: e.target.result,
-                                    element: video,
-                                    originalWidth: video.videoWidth,
-                                    originalHeight: video.videoHeight,
-                                    duration: video.duration
-                                });
-                                
-                                loadedCount++;
-                                if (loadedCount === videoFiles.length) {
-                                    updateUI();
-                                    statusText.textContent = `已加载 ${videoFiles.length} 个视频`;
-                                }
-                            });
-                            video.src = e.target.result;
-                        };
-                        reader.readAsDataURL(file);
+                // 加载视频文件
+                state.videos = await Promise.all(files.map(async (file) => {
+                    const url = URL.createObjectURL(file);
+                    const video = await createVideoElement(url);
+                    return {
+                        file,
+                        originalData: url,
+                        originalWidth: video.videoWidth,
+                        originalHeight: video.videoHeight,
+                        duration: video.duration
                     };
-                });
-            }
-            
-            // 更新UI状态
-            function updateUI() {
-                if (videos.length > 0) {
-                    resizeAllBtn.disabled = false;
-                    downloadAllBtn.disabled = false;
-                    clearAllBtn.disabled = false;
-                    renderPreviews();
-                } else {
-                    resizeAllBtn.disabled = true;
-                    downloadAllBtn.disabled = true;
-                    clearAllBtn.disabled = true;
-                    previewContainer.innerHTML = '';
-                }
-            }
-            
-            // 渲染预览
-            function renderPreviews() {
-                previewContainer.innerHTML = '';
+                }));
+
+                updateUI();
                 
-                videos.forEach((video, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'video-card';
-                    
-                    const videoPreview = document.createElement('video');
-                    videoPreview.className = 'video-preview';
-                    videoPreview.src = video.originalData;
-                    videoPreview.controls = true;
-                    videoPreview.muted = true;
-                    videoPreview.loop = true;
-                    videoPreview.playsInline = true;
-                    videoPreview.style.objectFit = 'cover';
-                    
-                    const info = document.createElement('div');
-                    info.className = 'video-info';
-                    
-                    const name = document.createElement('div');
-                    name.className = 'video-name';
-                    name.textContent = video.file.name;
-                    
-                    const details = document.createElement('div');
-                    details.className = 'video-details';
-                    details.textContent = `${video.originalWidth}×${video.originalHeight} - ${formatFileSize(video.file.size)} - ${formatDuration(video.duration)}`;
-                    
-                    const actions = document.createElement('div');
-                    actions.className = 'action-buttons small';
-                    
-                    const resizeBtn = document.createElement('button');
-                    resizeBtn.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
-                            <path d="M21 3H3v18h18V3z"></path>
-                            <path d="M21 12H9"></path>
-                            <path d="M12 3v18"></path>
-                        </svg>
-                        调整
-                    `;
-                    resizeBtn.addEventListener('click', () => resizeSingleVideo(index));
-                    
-                    const downloadBtn = document.createElement('button');
-                    downloadBtn.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        下载
-                    `;
-                    downloadBtn.addEventListener('click', () => downloadSingleVideo(index));
-                    
-                    const removeBtn = document.createElement('button');
-                    removeBtn.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                        移除
-                    `;
-                    removeBtn.addEventListener('click', () => {
-                        videos.splice(index, 1);
-                        updateUI();
-                        statusText.textContent = `已移除视频 "${video.file.name}"`;
-                    });
-                    
-                    actions.appendChild(resizeBtn);
-                    actions.appendChild(downloadBtn);
-                    actions.appendChild(removeBtn);
-                    
-                    info.appendChild(name);
-                    info.appendChild(details);
-                    
-                    card.appendChild(videoPreview);
-                    card.appendChild(info);
-                    card.appendChild(actions);
-                    
-                    previewContainer.appendChild(card);
-                });
-            }
-            
-            // 调整单个视频
-            function resizeSingleVideo(index) {
-                const video = videos[index];
-                const width = parseInt(widthInput.value) || null;
-                const height = parseInt(heightInput.value) || null;
-                const method = resizeMethod.value;
-                const format = formatSelect.value;
-                const quality = parseInt(qualityInput.value);
-                
-                if (!width && !height) {
-                    statusText.textContent = '请至少指定宽度或高度';
+                // 启用按钮
+                document.getElementById('resizeAllBtn').disabled = false;
+                document.getElementById('downloadAllBtn').disabled = false;
+                document.getElementById('clearAllBtn').disabled = false;
+            });
+
+            // 处理按钮点击
+            document.getElementById('resizeAllBtn').addEventListener('click', handleProcessAll);
+
+            // 下载所有按钮点击
+            document.getElementById('downloadAllBtn').addEventListener('click', () => {
+                if (state.videos.length === 0) {
+                    alert('没有可下载的视频');
                     return;
                 }
                 
-                // 计算新尺寸
-                let newWidth, newHeight;
+                const zip = new JSZip();
+                const videoFolder = zip.folder('processed_videos');
                 
-                if (method === 'contain') {
-                    // 保持比例
-                    const aspectRatio = video.originalWidth / video.originalHeight;
-                    
-                    if (width && height) {
-                        const widthRatio = width / video.originalWidth;
-                        const heightRatio = height / video.originalHeight;
-                        const ratio = Math.min(widthRatio, heightRatio);
-                        newWidth = Math.round(video.originalWidth * ratio);
-                        newHeight = Math.round(video.originalHeight * ratio);
-                    } else if (width) {
-                        newWidth = width;
-                        newHeight = Math.round(width / aspectRatio);
-                    } else {
-                        newHeight = height;
-                        newWidth = Math.round(height * aspectRatio);
-                    }
-                } else {
-                    // 直接设置
-                    newWidth = width || video.originalWidth;
-                    newHeight = height || video.originalHeight;
-                }
-                
-                // 使用FFmpeg处理视频
-                if (ffmpegAvailable) {
-                    statusText.textContent = `正在处理 "${video.file.name}"...`;
-                    
-                    // 创建FFmpeg实例
-                    const ffmpeg = FFmpeg.create({ log: true });
-                    
-                    // 将视频添加到FFmpeg
-                    ffmpeg.FS('writeFile', video.file.name, video.originalData);
-                    
-                    // 设置输出文件名和格式
-                    let outputName = video.file.name.replace(/\.[^/.]+$/, '');
-                    outputName = `${outputName}_${newWidth}x${newHeight}.mp4`;
-                    if (format !== 'original' && format !== 'mp4') {
-                        outputName = outputName.replace('.mp4', `.${format}`);
-                    }
-                    
-                    // 构建FFmpeg命令
-                    const command = [
-                        '-i', video.file.name, // 输入文件
-                        '-vf', `scale=${newWidth}:${newHeight}`, // 调整大小
-                        '-crf', quality.toString(), // 设置质量
-                        '-y', // 覆盖输出文件而不提示
-                        outputName // 输出文件
-                    ];
-                    
-                    // 运行FFmpeg
-                    ffmpeg.run(...command)
-                        .then(() => {
-                            // 获取处理后的视频数据
-                            const data = ffmpeg.FS('readFile', outputName);
-                            
-                            // 创建Blob对象
-                            const blob = new Blob([data.buffer], { type: `video/${format === 'original' ? video.file.type.split('/')[1] : format}` });
-                            
-                            // 更新视频数据
-                            video.resizedData = URL.createObjectURL(blob);
-                            video.resizedWidth = newWidth;
-                            video.resizedHeight = newHeight;
-                            video.resizedFile = new File([blob], outputName, { type: blob.type });
-                            
-                            // 更新预览
-                            const previewVideo = previewContainer.querySelectorAll('video')[index];
-                            previewVideo.src = video.resizedData;
-                            
-                            // 更新尺寸信息
-                            const detailsInfo = previewContainer.querySelectorAll('.video-details')[index];
-                            detailsInfo.textContent = `${newWidth}×${newHeight} - ${formatFileSize(blob.size)} - ${formatDuration(video.duration)}`;
-                            
-                            statusText.textContent = `视频 "${video.file.name}" 已调整为 ${newWidth}×${newHeight}`;
-                        })
-                        .catch(error => {
-                            console.error('FFmpeg错误:', error);
-                            statusText.textContent = '视频处理失败，请检查设置或重新尝试';
-                        });
-                } else {
-                    statusText.textContent = '警告: FFmpeg未加载成功，无法处理视频';
-                }
-            }
-            
-            // 下载单个视频
-            function downloadSingleVideo(index) {
-                const video = videos[index];
-                const dataUrl = video.resizedData || video.originalData;
-                const fileName = video.resizedFile ? video.resizedFile.name : video.file.name;
-                
-                const a = document.createElement('a');
-                a.href = dataUrl;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                statusText.textContent = `已下载视频 "${fileName}"`;
-            }
-            
-            // 调整所有视频
-            resizeAllBtn.addEventListener('click', function() {
-                if (videos.length === 0) return;
-                
-                progressContainer.style.display = 'block';
-                progressBar.style.width = '0%';
-                statusText.textContent = `正在调整 ${videos.length} 个视频...`;
-                
-                let processed = 0;
-                
-                videos.forEach((_, index) => {
-                    setTimeout(() => {
-                        resizeSingleVideo(index);
-                        processed++;
-                        progressBar.style.width = `${(processed / videos.length) * 100}%`;
-                        
-                        if (processed === videos.length) {
-                            progressContainer.style.display = 'none';
-                            statusText.textContent = `已完成调整 ${videos.length} 个视频`;
-                        }
-                    }, index * 100); // 添加小延迟防止UI阻塞
-                });
-            });
-            
-            // 下载所有视频
-            downloadAllBtn.addEventListener('click', function() {
-                if (videos.length === 0) return;
-                
-                // 检查是否有JSZip可用
-                const zipAvailable = typeof JSZip !== 'undefined';
-                
-                if (zipAvailable && videos.length > 1) {
-                    // 使用本地JSZip库
-                    const zip = new JSZip();
-                    const videoFolder = zip.folder("resized_videos");
-                    let addedFiles = 0;
-                    
-                    statusText.textContent = `正在准备 ${videos.length} 个视频的ZIP下载...`;
-                    progressContainer.style.display = 'block';
-                    progressBar.style.width = '0%';
-                    
-                    videos.forEach((video, index) => {
-                        const dataUrl = video.resizedData || video.originalData;
-                        const fileName = video.resizedFile ? video.resizedFile.name : video.file.name;
-                        
-                        fetch(dataUrl)
-                            .then(res => res.blob())
+                state.videos.forEach(video => {
+                    if (video.resizedData) {
+                        fetch(video.resizedData)
+                            .then(response => response.blob())
                             .then(blob => {
+                                const fileName = video.resizedFile.name;
                                 videoFolder.file(fileName, blob);
-                                addedFiles++;
-                                progressBar.style.width = `${(addedFiles / videos.length) * 100}%`;
                                 
-                                if (addedFiles === videos.length) {
-                                    zip.generateAsync({ type: 'blob' })
-                                        .then(content => {
-                                            const a = document.createElement('a');
-                                            a.href = URL.createObjectURL(content);
-                                            a.download = 'resized_videos.zip';
-                                            document.body.appendChild(a);
-                                            a.click();
-                                            document.body.removeChild(a);
-                                            
-                                            progressContainer.style.display = 'none';
-                                            statusText.textContent = `已下载 ${videos.length} 个视频的ZIP文件`;
+                                // 当所有文件都添加到zip后，开始下载
+                                if (video === state.videos[state.videos.length - 1]) {
+                                    zip.generateAsync({type:'blob'})
+                                        .then(function(content) {
+                                            saveAs(content, 'processed_videos.zip');
                                         });
                                 }
                             });
-                    });
-                } else {
-                    // 没有JSZip或只有一张图片，逐个下载
-                    downloadVideosIndividually();
-                }
-            });
-            
-            // 如果没有JSZip，逐个下载视频
-            function downloadVideosIndividually() {
-                let delay = 0;
-                
-                videos.forEach((_, index) => {
-                    setTimeout(() => {
-                        downloadSingleVideo(index);
-                    }, delay);
-                    delay += 300; // 每个下载间隔300ms
-                });
-                statusText.textContent = `正在逐个下载 ${videos.length} 个视频...`;
-            }
-            
-            // 清除所有视频
-            clearAllBtn.addEventListener('click', function() {
-                if (videos.length === 0) return;
-                
-                // 释放所有创建的Blob URL
-                videos.forEach(video => {
-                    if (video.resizedData) {
-                        URL.revokeObjectURL(video.resizedData);
                     }
                 });
-                
-                videos = [];
+            });
+
+            // 清除所有按钮点击
+            document.getElementById('clearAllBtn').addEventListener('click', () => {
+                state.videos = [];
                 updateUI();
-                statusText.textContent = '已清除所有视频';
+                document.getElementById('resizeAllBtn').disabled = true;
+                document.getElementById('downloadAllBtn').disabled = true;
+                document.getElementById('clearAllBtn').disabled = true;
             });
+
+            // 功能说明展开/折叠
+            const instructionsToggle = document.getElementById('instructionsToggle');
+            const instructionsContent = document.getElementById('instructionsContent');
             
-            // 辅助函数：格式化文件大小
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
-            
-            // 辅助函数：格式化视频时长
-            function formatDuration(seconds) {
-                const hours = Math.floor(seconds / 3600);
-                const minutes = Math.floor((seconds % 3600) / 60);
-                const secs = Math.floor(seconds % 60);
-                
-                if (hours > 0) {
-                    return `${hours}小时${minutes}分钟${secs}秒`;
-                } else if (minutes > 0) {
-                    return `${minutes}分钟${secs}秒`;
-                } else {
-                    return `${secs}秒`;
-                }
-            }
-            
-            // 宽度和高度联动 - 如果保持比例
-            let maintainRatio = false;
-            let ratio = 1;
-            
-            widthInput.addEventListener('input', function() {
-                if (maintainRatio && widthInput.value && !heightInput.value) {
-                    heightInput.value = Math.round(widthInput.value / ratio);
-                }
+            instructionsToggle.addEventListener('click', () => {
+                instructionsContent.classList.toggle('show');
+                const arrow = instructionsToggle.querySelector('span:last-child');
+                arrow.textContent = instructionsContent.classList.contains('show') ? '▲' : '▼';
             });
-            
-            heightInput.addEventListener('input', function() {
-                if (maintainRatio && heightInput.value && !widthInput.value) {
-                    widthInput.value = Math.round(heightInput.value * ratio);
-                }
-            });
-            
-            // 添加保持比例复选框
-            const ratioCheckbox = document.createElement('div');
-            ratioCheckbox.innerHTML = `
-                <label style="display: flex; align-items: center; margin-top: 10px;">
-                    <input type="checkbox" id="maintainRatioCheckbox" style="margin-right: 8px;">
-                    保持原始比例
-                </label>
-            `;
-            document.querySelector('.control-group:nth-child(1)').appendChild(ratioCheckbox);
-            
-            const maintainRatioCheckbox = document.getElementById('maintainRatioCheckbox');
-            maintainRatioCheckbox.addEventListener('change', function() {
-                maintainRatio = this.checked;
-                if (maintainRatio && videos.length > 0) {
-                    ratio = videos[0].originalWidth / videos[0].originalHeight;
-                }
-            });
-            
+
             // 添加黑暗模式切换
             const darkModeToggle = document.createElement('button');
             darkModeToggle.textContent = '🌙 黑暗模式';
@@ -1089,158 +1054,115 @@
                 this.style.backgroundColor = darkMode ? '#fff' : '#333';
                 this.style.color = darkMode ? '#333' : '#fff';
             });
-            
-            // 添加黑暗模式样式
-            const style = document.createElement('style');
-            style.textContent = `
-                .dark-mode {
-                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-                    color: #f0f0f0;
-                }
-                .dark-mode .container {
-                    background-color: #2d2d2d;
-                    border-color: #444;
-                }
-                .dark-mode .upload-area {
-                    background-color: #333;
-                    border-color: #444;
-                }
-                .dark-mode .instructions {
-                    border-color: #444;
-                }
-                .dark-mode .instructions-header {
-                    background: linear-gradient(to right, #333, #444);
-                    color: #f0f0f0;
-                }
-                .dark-mode .instructions-content {
-                    background-color: #333;
-                }
-                .dark-mode .video-card {
-                    background-color: #333;
-                    border-color: #444;
-                }
-                .dark-mode input, .dark-mode select {
-                    background-color: #444;
-                    color: #f0f0f0;
-                    border-color: #555;
-                }
-                .dark-mode label {
-                    color: #f0f0f0;
-                }
-            `;
-            document.head.appendChild(style);
-            
-            // 添加视频旋转功能
-            const rotateControl = document.createElement('div');
-            rotateControl.innerHTML = `
-                <label for="rotateSelect">旋转角度</label>
-                <select id="rotateSelect" style="margin-top: 5px;">
-                    <option value="0">0°</option>
-                    <option value="90">90°</option>
-                    <option value="180">180°</option>
-                    <option value="270">270°</option>
-                </select>
-            `;
-            document.querySelector('.controls').appendChild(rotateControl);
-            
-            // 修改resizeSingleVideo函数以支持旋转
-            const originalResizeSingleVideo = resizeSingleVideo;
-            resizeSingleVideo = function(index) {
-                const rotation = parseInt(document.getElementById('rotateSelect').value);
-                
-                if (rotation === 0) {
-                    return originalResizeSingleVideo.call(this, index);
-                }
-                
-                const video = videos[index];
-                const width = parseInt(widthInput.value) || video.originalWidth;
-                const height = parseInt(heightInput.value) || video.originalHeight;
-                const method = resizeMethod.value;
-                const format = formatSelect.value;
-                const quality = parseInt(qualityInput.value);
-                
-                // 使用FFmpeg处理视频旋转
-                if (ffmpegAvailable) {
-                    statusText.textContent = `正在处理 "${video.file.name}"...`;
-                    
-                    // 创建FFmpeg实例
-                    const ffmpeg = FFmpeg.create({ log: true });
-                    
-                    // 将视频添加到FFmpeg
-                    ffmpeg.FS('writeFile', video.file.name, video.originalData);
-                    
-                    // 设置输出文件名和格式
-                    let outputName = video.file.name.replace(/\.[^/.]+$/, '');
-                    outputName = `${outputName}_rotated_${rotation}deg.mp4`;
-                    if (format !== 'original') {
-                        outputName = outputName.replace('.mp4', `.${format}`);
-                    }
-                    
-                    // 构建旋转过滤器
-                    let rotationFilter;
-                    switch(rotation) {
-                        case 90:
-                            rotationFilter = 'transpose=1';
-                            [newWidth, newHeight] = [height, width];
-                            break;
-                        case 180:
-                            rotationFilter = 'vflip,hflip';
-                            newWidth = width;
-                            newHeight = height;
-                            break;
-                        case 270:
-                            rotationFilter = 'transpose=2';
-                            [newWidth, newHeight] = [height, width];
-                            break;
-                        default:
-                            rotationFilter = '';
-                            newWidth = width;
-                            newHeight = height;
-                    }
-                    
-                    // 构建FFmpeg命令
-                    const command = [
-                        '-i', video.file.name, // 输入文件
-                        '-vf', `${rotationFilter},${method === 'contain' ? `scale=${newWidth}:${newHeight}:force_original_aspect_ratio=decrease` : `scale=${newWidth}:${newHeight}`}`, // 调整大小
-                        '-crf', quality.toString(), // 设置质量
-                        '-y', // 覆盖输出文件而不提示
-                        outputName // 输出文件
-                    ];
-                    
-                    // 运行FFmpeg
-                    ffmpeg.run(...command)
-                        .then(() => {
-                            // 获取处理后的视频数据
-                            const data = ffmpeg.FS('readFile', outputName);
-                            
-                            // 创建Blob对象
-                            const blob = new Blob([data.buffer], { type: `video/${format === 'original' ? video.file.type.split('/')[1] : format}` });
-                            
-                            // 更新视频数据
-                            video.resizedData = URL.createObjectURL(blob);
-                            video.resizedWidth = newWidth;
-                            video.resizedHeight = newHeight;
-                            video.resizedFile = new File([blob], outputName, { type: blob.type });
-                            
-                            // 更新预览
-                            const previewVideo = previewContainer.querySelectorAll('video')[index];
-                            previewVideo.src = video.resizedData;
-                            
-                            // 更新尺寸信息
-                            const detailsInfo = previewContainer.querySelectorAll('.video-details')[index];
-                            detailsInfo.textContent = `${newWidth}×${newHeight} - ${formatFileSize(blob.size)} - ${formatDuration(video.duration)} (旋转 ${rotation}°)`;
-                            
-                            statusText.textContent = `视频 "${video.file.name}" 已调整为 ${newWidth}×${newHeight} 并旋转 ${rotation}°`;
-                        })
-                        .catch(error => {
-                            console.error('FFmpeg错误:', error);
-                            statusText.textContent = '视频处理失败，请检查设置或重新尝试';
-                        });
-                } else {
-                    statusText.textContent = '警告: FFmpeg未加载成功，无法处理视频';
-                }
-            };
         });
+
+        // 创建视频元素
+        function createVideoElement(url) {
+            return new Promise((resolve) => {
+                const video = document.createElement('video');
+                video.src = url;
+                video.addEventListener('loadedmetadata', () => resolve(video));
+                video.load();
+            });
+        }
+
+        // 更新用户界面
+        function updateUI() {
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = '';
+
+            state.videos.forEach((video, index) => {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                card.innerHTML = `
+                    <video class="video-preview" controls muted loop>
+                        <source src="${video.originalData}" type="${video.file.type}">
+                    </video>
+                    <div class="video-info">
+                        <div class="video-name">${video.file.name}</div>
+                        <div class="video-details">
+                            ${video.originalWidth}x${video.originalHeight} | 
+                            ${formatFileSize(video.file.size)} | 
+                            ${formatDuration(video.duration)}
+                        </div>
+                        <div class="processing-status"></div>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: 0%;"></div>
+                        </div>
+                        <div class="action-buttons small">
+                            <button class="process-btn" title="处理视频">处理</button>
+                            <button class="download-btn" title="下载处理后的视频">下载</button>
+                            <button class="remove-btn" title="移除视频">移除</button>
+                        </div>
+                    </div>
+                `;
+
+                // 绑定按钮事件
+                const processBtn = card.querySelector('.process-btn');
+                const downloadBtn = card.querySelector('.download-btn');
+                const removeBtn = card.querySelector('.remove-btn');
+                const progressBar = card.querySelector('.progress');
+
+                processBtn.addEventListener('click', async () => {
+                    try {
+                        processBtn.textContent = '处理中...';
+                        processBtn.disabled = true;
+                        
+                        // 创建单个视频的处理队列
+                        state.processingQueue = [
+                            { 
+                                index, 
+                                promise: new Promise((resolve, reject) => {
+                                    state.processingQueue.push({ index, resolve, reject });
+                                })
+                            }
+                        ];
+                        state.activeTasks = 0;
+                        
+                        // 启动处理
+                        await processQueue();
+                        
+                        // 更新进度条
+                        updateProgressUI();
+                        
+                        processBtn.textContent = '处理';
+                        processBtn.disabled = false;
+                        
+                        alert(`视频 "${video.file.name}" 处理完成！`);
+                    } catch (error) {
+                        console.error(`处理失败: ${video.file.name}`, error);
+                        processBtn.textContent = '处理';
+                        processBtn.disabled = false;
+                        alert(`处理 "${video.file.name}" 时出错: ${error.message}`);
+                    }
+                });
+
+                downloadBtn.addEventListener('click', () => {
+                    if (video.resizedData) {
+                        const a = document.createElement('a');
+                        a.href = video.resizedData;
+                        a.download = video.resizedFile.name;
+                        a.click();
+                    } else {
+                        alert('请先处理视频');
+                    }
+                });
+
+                removeBtn.addEventListener('click', () => {
+                    state.videos.splice(index, 1);
+                    updateUI();
+                    
+                    // 如果没有视频了，禁用按钮
+                    if (state.videos.length === 0) {
+                        document.getElementById('resizeAllBtn').disabled = true;
+                        document.getElementById('downloadAllBtn').disabled = true;
+                        document.getElementById('clearAllBtn').disabled = true;
+                    }
+                });
+
+                container.appendChild(card);
+            });
+        }
     </script>
 </body>
 </html>
