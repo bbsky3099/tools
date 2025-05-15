@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>视频尺寸及格式转换工具</title>
     <!-- 本地加载JSZip库 -->
-    <script src="jszip.min.js"></script>
+    <script src="/tools/jszip.min.js"></script>
     <!-- 本地加载FFmpeg库 -->
-   <script type="module" src="/public/ffmpeg/ffmpeg-core.min.js"></script>
+   <script src="/tools/public/ffmpeg/ffmpeg-core.min.js"  type="module"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -634,6 +634,8 @@
             totalSize: 0
         };
 
+// 初始化FFmpeg
+import { createFFmpeg } from './public/ffmpeg/ffmpeg-core.min.js';
 async function initFFmpeg() {
   if (typeof FFmpeg === 'undefined') {
     showFFmpegError('FFmpeg库未加载');
@@ -642,18 +644,16 @@ async function initFFmpeg() {
 
   try {
     const { createFFmpeg } = window.FFmpeg;
-    const ffmpeg = createFFmpeg({
-      corePath: '/public/ffmpeg/ffmpeg-core.js',
-      wasmPath: '/public/ffmpeg/ffmpeg-core.wasm',
-    });
-    await ffmpeg.load();
-    state.ffmpeg = ffmpeg; // 存储 ffmpeg 实例到状态
-    state.ffmpegLoaded = true;
+  const ffmpeg = createFFmpeg({
+    corePath: '/public/ffmpeg/ffmpeg-core.js',
+    wasmPath: '/public/ffmpeg/ffmpeg-core.wasm',
+  });
+  await ffmpeg.load();
+    ffmpegLoaded = true;
   } catch (error) {
     showFFmpegError(`初始化失败: ${error.message}`);
   }
 }
-
 
         // 工具函数：显示错误
         function showFFmpegError(message) {
@@ -693,20 +693,20 @@ async function initFFmpeg() {
         }
 
         // 带超时的任务处理器
-async function processWithTimeout(taskPromise, timeout) {
-  let timeoutHandle;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutHandle = setTimeout(() => {
-      reject(new Error(`操作超时（${timeout/1000}秒）`));
-    }, timeout);
-  });
+        async function processWithTimeout(taskPromise, timeout) {
+            let timeoutHandle;
+            const timeoutPromise = new Promise((_, reject) => {
+                timeoutHandle = setTimeout(() => {
+                    reject(new Error(`操作超时（${timeout/1000}秒）`));
+                }, timeout);
+            });
 
-  try {
-    return await Promise.race([taskPromise, timeoutPromise]);
-  } finally {
-    clearTimeout(timeoutHandle);
-  }
-}
+            try {
+                return await Promise.race([taskPromise, timeoutPromise]);
+            } finally {
+                clearTimeout(timeoutHandle);
+            }
+        }
 
         // 视频处理队列
         async function processQueue() {
@@ -730,65 +730,59 @@ async function processWithTimeout(taskPromise, timeout) {
         }
 
         // 核心视频处理逻辑
-async function processVideo(index) {
-  const startTime = Date.now();
-  const video = state.videos[index];
-  
-  try {
-    // 确保 FFmpeg 已正确加载
-    if (!state.ffmpegLoaded) {
-      throw new Error('FFmpeg未就绪');
-    }
+        async function processVideo(index) {
+            const startTime = Date.now();
+            const video = state.videos[index];
+            
+            try {
+                // 准备文件
+                showStatus(`[${index+1}/${state.videos.length}] 正在读取 ${video.file.name}...`);
+                const fileBuffer = new Uint8Array(await video.file.arrayBuffer());
+                
+                // 写入FFmpeg
+                showStatus(`[${index+1}/${state.videos.length}] 准备处理 ${video.file.name}...`);
+                await state.ffmpeg.FS('writeFile', video.file.name, fileBuffer);
 
-    // 准备文件
-    showStatus(`[${index+1}/${state.videos.length}] 正在读取 ${video.file.name}...`);
-    const fileBuffer = new Uint8Array(await video.file.arrayBuffer());
-    
-    // 写入FFmpeg
-    showStatus(`[${index+1}/${state.videos.length}] 准备处理 ${video.file.name}...`);
-    await state.ffmpeg.FS('writeFile', video.file.name, fileBuffer);
+                // 构建命令
+                const outputExt = getOutputExtension(video);
+                const outputName = generateOutputFilename(video, outputExt);
+                const command = buildFFmpegCommand(video, outputName);
 
-    // 构建命令
-    const outputExt = getOutputExtension(video);
-    const outputName = generateOutputFilename(video, outputExt);
-    const command = buildFFmpegCommand(video, outputName);
+                // 执行命令
+                showStatus(`[${index+1}/${state.videos.length}] 正在处理 ${video.file.name}...`);
+                await state.ffmpeg.run(...command);
 
-    // 执行命令
-    showStatus(`[${index+1}/${state.videos.length}] 正在处理 ${video.file.name}...`);
-    await state.ffmpeg.run(...command);
+                // 读取结果
+                showStatus(`[${index+1}/${state.videos.length}] 正在保存 ${outputName}...`);
+                const outputData = state.ffmpeg.FS('readFile', outputName);
+                
+                // 创建Blob
+                const blob = new Blob([outputData.buffer], { type: `video/${outputExt}` });
+                const duration = Date.now() - startTime;
 
-    // 读取结果
-    showStatus(`[${index+1}/${state.videos.length}] 正在保存 ${outputName}...`);
-    const outputData = state.ffmpeg.FS('readFile', outputName);
-    
-    // 创建Blob
-    const blob = new Blob([outputData.buffer], { type: `video/${outputExt}` });
-    const duration = Date.now() - startTime;
+                // 更新状态
+                state.videos[index] = {
+                    ...video,
+                    resizedData: URL.createObjectURL(blob),
+                    resizedFile: new File([blob], outputName, { type: blob.type }),
+                    processingTime: duration
+                };
 
-    // 更新状态
-    state.videos[index] = {
-      ...video,
-      resizedData: URL.createObjectURL(blob),
-      resizedFile: new File([blob], outputName, { type: blob.type }),
-      processingTime: duration
-    };
+                // 清理
+                state.ffmpeg.FS('unlink', video.file.name);
+                state.ffmpeg.FS('unlink', outputName);
 
-    // 清理
-    state.ffmpeg.FS('unlink', video.file.name);
-    state.ffmpeg.FS('unlink', outputName);
+                // 更新性能统计
+                perfMetrics.processedCount++;
+                perfMetrics.totalSize += blob.size;
 
-    // 更新性能统计
-    perfMetrics.processedCount++;
-    perfMetrics.totalSize += blob.size;
-
-    return true;
-  } catch (error) {
-    console.error(`处理失败: ${video.file.name}`, error);
-    showStatus(`处理失败: ${video.file.name} - ${error.message}`);
-    return false;
-  }
-}
-
+                return true;
+            } catch (error) {
+                console.error(`处理失败: ${video.file.name}`, error);
+                showStatus(`处理失败: ${video.file.name} - ${error.message}`);
+                return false;
+            }
+        }
 
         // 构建FFmpeg命令
         function buildFFmpegCommand(video, outputName) {
@@ -924,140 +918,140 @@ async function processVideo(index) {
         }
 
         // 初始化事件监听
-document.addEventListener('DOMContentLoaded', async () => {
-  // 初始化FFmpeg
-  await initFFmpeg();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 初始化FFmpeg
+            await initFFmpeg();
 
-  // 初始化UI组件
-  const uploadArea = document.getElementById('uploadArea');
-  const fileInput = document.getElementById('fileInput');
+            // 初始化UI组件
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
 
-  // 文件上传处理
-  uploadArea.addEventListener('click', () => fileInput.click());
-  
-  uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('active');
-  });
-  
-  uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('active');
-  });
-  
-  uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('active');
-    if (e.dataTransfer.files.length) {
-      fileInput.files = e.dataTransfer.files;
-      fileInput.dispatchEvent(new Event('change'));
-    }
-  });
-  
-  fileInput.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-    if (files.length > 5) {
-      alert('每次最多只能上传5个视频，请减少文件数量。');
-      return;
-    }
-    // 加载视频文件
-    state.videos = await Promise.all(files.map(async (file) => {
-      const url = URL.createObjectURL(file);
-      const video = await createVideoElement(url);
-      return {
-        file,
-        originalData: url,
-        originalWidth: video.videoWidth,
-        originalHeight: video.videoHeight,
-        duration: video.duration
-      };
-    }));
-
-    updateUI();
-    
-    // 启用按钮
-    document.getElementById('resizeAllBtn').disabled = false;
-    document.getElementById('downloadAllBtn').disabled = false;
-    document.getElementById('clearAllBtn').disabled = false;
-  });
-
-  // 处理按钮点击
-  document.getElementById('resizeAllBtn').addEventListener('click', handleProcessAll);
-
-  // 下载所有按钮点击
-  document.getElementById('downloadAllBtn').addEventListener('click', () => {
-    if (state.videos.length === 0) {
-      alert('没有可下载的视频');
-      return;
-    }
-    
-    const zip = new JSZip();
-    const videoFolder = zip.folder('processed_videos');
-    
-    state.videos.forEach(video => {
-      if (video.resizedData) {
-        fetch(video.resizedData)
-            .then(response => response.blob())
-            .then(blob => {
-              const fileName = video.resizedFile.name;
-              videoFolder.file(fileName, blob);
-              
-              // 当所有文件都添加到zip后，开始下载
-              if (video === state.videos[state.videos.length - 1]) {
-                zip.generateAsync({type:'blob'})
-                    .then(function(content) {
-                      saveAs(content, 'processed_videos.zip');
-                    });
-              }
+            // 文件上传处理
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('active');
             });
-      }
-    });
-  });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('active');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('active');
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            });
+            
+            fileInput.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                if (files.length > 5) {
+                    alert('每次最多只能上传5个视频，请减少文件数量。');
+                    return;
+                }
+                // 加载视频文件
+                state.videos = await Promise.all(files.map(async (file) => {
+                    const url = URL.createObjectURL(file);
+                    const video = await createVideoElement(url);
+                    return {
+                        file,
+                        originalData: url,
+                        originalWidth: video.videoWidth,
+                        originalHeight: video.videoHeight,
+                        duration: video.duration
+                    };
+                }));
 
-  // 清除所有按钮点击
-  document.getElementById('clearAllBtn').addEventListener('click', () => {
-    state.videos = [];
-    updateUI();
-    document.getElementById('resizeAllBtn').disabled = true;
-    document.getElementById('downloadAllBtn').disabled = true;
-    document.getElementById('clearAllBtn').disabled = true;
-  });
+                updateUI();
+                
+                // 启用按钮
+                document.getElementById('resizeAllBtn').disabled = false;
+                document.getElementById('downloadAllBtn').disabled = false;
+                document.getElementById('clearAllBtn').disabled = false;
+            });
 
-  // 功能说明展开/折叠
-  const instructionsToggle = document.getElementById('instructionsToggle');
-  const instructionsContent = document.getElementById('instructionsContent');
-  
-  instructionsToggle.addEventListener('click', () => {
-    instructionsContent.classList.toggle('show');
-    const arrow = instructionsToggle.querySelector('span:last-child');
-    arrow.textContent = instructionsContent.classList.contains('show') ? '▲' : '▼';
-  });
+            // 处理按钮点击
+            document.getElementById('resizeAllBtn').addEventListener('click', handleProcessAll);
 
-  // 添加黑暗模式切换
-  const darkModeToggle = document.createElement('button');
-  darkModeToggle.textContent = '🌙 黑暗模式';
-  darkModeToggle.style.position = 'fixed';
-  darkModeToggle.style.bottom = '20px';
-  darkModeToggle.style.right = '20px';
-  darkModeToggle.style.zIndex = '1000';
-  darkModeToggle.style.padding = '8px 16px';
-  darkModeToggle.style.borderRadius = '20px';
-  darkModeToggle.style.backgroundColor = '#333';
-  darkModeToggle.style.color = 'white';
-  darkModeToggle.style.border = 'none';
-  darkModeToggle.style.cursor = 'pointer';
-  darkModeToggle.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-  document.body.appendChild(darkModeToggle);
-  
-  let darkMode = false;
-  darkModeToggle.addEventListener('click', function() {
-    darkMode = !darkMode;
-    document.body.classList.toggle('dark-mode', darkMode);
-    this.textContent = darkMode ? '☀️ 明亮模式' : '🌙 黑暗模式';
-    this.style.backgroundColor = darkMode ? '#fff' : '#333';
-    this.style.color = darkMode ? '#333' : '#fff';
-  });
-});
+            // 下载所有按钮点击
+            document.getElementById('downloadAllBtn').addEventListener('click', () => {
+                if (state.videos.length === 0) {
+                    alert('没有可下载的视频');
+                    return;
+                }
+                
+                const zip = new JSZip();
+                const videoFolder = zip.folder('processed_videos');
+                
+                state.videos.forEach(video => {
+                    if (video.resizedData) {
+                        fetch(video.resizedData)
+                            .then(response => response.blob())
+                            .then(blob => {
+                                const fileName = video.resizedFile.name;
+                                videoFolder.file(fileName, blob);
+                                
+                                // 当所有文件都添加到zip后，开始下载
+                                if (video === state.videos[state.videos.length - 1]) {
+                                    zip.generateAsync({type:'blob'})
+                                        .then(function(content) {
+                                            saveAs(content, 'processed_videos.zip');
+                                        });
+                                }
+                            });
+                    }
+                });
+            });
+
+            // 清除所有按钮点击
+            document.getElementById('clearAllBtn').addEventListener('click', () => {
+                state.videos = [];
+                updateUI();
+                document.getElementById('resizeAllBtn').disabled = true;
+                document.getElementById('downloadAllBtn').disabled = true;
+                document.getElementById('clearAllBtn').disabled = true;
+            });
+
+            // 功能说明展开/折叠
+            const instructionsToggle = document.getElementById('instructionsToggle');
+            const instructionsContent = document.getElementById('instructionsContent');
+            
+            instructionsToggle.addEventListener('click', () => {
+                instructionsContent.classList.toggle('show');
+                const arrow = instructionsToggle.querySelector('span:last-child');
+                arrow.textContent = instructionsContent.classList.contains('show') ? '▲' : '▼';
+            });
+
+            // 添加黑暗模式切换
+            const darkModeToggle = document.createElement('button');
+            darkModeToggle.textContent = '🌙 黑暗模式';
+            darkModeToggle.style.position = 'fixed';
+            darkModeToggle.style.bottom = '20px';
+            darkModeToggle.style.right = '20px';
+            darkModeToggle.style.zIndex = '1000';
+            darkModeToggle.style.padding = '8px 16px';
+            darkModeToggle.style.borderRadius = '20px';
+            darkModeToggle.style.backgroundColor = '#333';
+            darkModeToggle.style.color = 'white';
+            darkModeToggle.style.border = 'none';
+            darkModeToggle.style.cursor = 'pointer';
+            darkModeToggle.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+            document.body.appendChild(darkModeToggle);
+            
+            let darkMode = false;
+            darkModeToggle.addEventListener('click', function() {
+                darkMode = !darkMode;
+                document.body.classList.toggle('dark-mode', darkMode);
+                this.textContent = darkMode ? '☀️ 明亮模式' : '🌙 黑暗模式';
+                this.style.backgroundColor = darkMode ? '#fff' : '#333';
+                this.style.color = darkMode ? '#333' : '#fff';
+            });
+        });
 
         // 创建视频元素
         function createVideoElement(url) {
