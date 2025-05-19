@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 转换工具</title>
+    <link rel="stylesheet" href="css/pdf.css">
+</head>
+
+<body>
+    <h1>PDF 转换工具</h1>
+    <div class="container">
+        <div id="uploadArea" class="upload-area">
+            <p>点击或拖拽 PDF 或 Office 文件到此处上传</p>
+            <p><small>支持单个或多个文件</small></p>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.pptx" multiple style="display: none;">
+        </div>
+
+        <div class="instructions">
+            <div class="instructions-header" id="instructionsToggle">
+                <span>功能说明和使用指南</span>
+                <span>▼</span>
+            </div>
+            <div class="instructions-content" id="instructionsContent">
+                <h3>应用功能</h3>
+                <ul class="instructions-list">
+                    <li><strong>完全本地运行</strong> - 所有处理都在浏览器中完成，不上传服务器</li>
+                    <li><strong>批量处理</strong> - 支持同时上传并处理多个文件</li>
+                    <li><strong>多种转换功能</strong> - 支持 PDF 转换、合并、拆分、压缩，以及 PDF 与 Word、Excel、PPT 互转</li>
+                </ul>
+
+                <h3>使用说明</h3>
+                <ol class="instructions-list">
+                    <li><strong>上传文件</strong>：点击上传区域或直接拖拽文件到指定区域</li>
+                    <li><strong>设置参数</strong>：选择相应的转换功能</li>
+                    <li><strong>处理文件</strong>：点击相应的按钮进行处理</li>
+                    <li><strong>下载文件</strong>：处理完成后，点击下载按钮下载处理后的文件</li>
+                </ol>
+
+                <h3>注意事项</h3>
+                <ul class="instructions-list">
+                    <li>大尺寸文件或大量文件处理可能需要较长时间</li>
+                    <li>所有操作不会影响原始文件</li>
+                    <li>建议每次处理不超过 50 个文件以获得最佳性能</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="convertType">转换类型</label>
+                <select id="convertType">
+                    <option value="pdfToWord">PDF 转 Word</option>
+                    <option value="pdfToExcel">PDF 转 Excel</option>
+                    <option value="pdfToPPT">PDF 转 PPT</option>
+                    <option value="wordToPdf">Word 转 PDF</option>
+                    <option value="excelToPdf">Excel 转 PDF</option>
+                    <option value="pptToPdf">PPT 转 PDF</option>
+                    <option value="pdfMerge">PDF 合并</option>
+                    <option value="pdfSplit">PDF 拆分</option>
+                    <option value="pdfCompress">PDF 压缩</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="convertAllBtn" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    style="margin-right: 8px;">
+                    <path d="M21 3H3v18h18V3z"></path>
+                    <path d="M21 12H9"></path>
+                    <path d="M12 3v18"></path>
+                </svg>
+                执行转换
+            </button>
+            <button id="downloadAllBtn" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    style="margin-right: 8px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                下载所有文件
+            </button>
+            <button id="clearAllBtn" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    style="margin-right: 8px;">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                    </path>
+                </svg>
+                清除所有文件
+            </button>
+        </div>
+
+        <div class="progress-container" style="display: none;">
+            <div class="status">正在处理...</div>
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+        </div>
+
+        <div class="status" id="statusText">准备就绪，请上传文件</div>
+        <div id="noZipWarning" class="no-zip-warning">
+            警告: JSZip 库未找到，批量下载将逐个下载文件
+        </div>
+
+        <div id="previewContainer" class="preview-container"></div>
+    </div>
+
+    <!-- 本地加载 JSZip 库 -->
+    <script src="js/pdf-lib.min.js"></script>
+    <script src="js/mammoth.browser.min.js"></script>
+    <script src="js/xlsx.full.min.js"></script>
+    <script src="js/pptxgen.min.js"></script>
+    <script src="js/pdf-parse.min.js"></script>
+    <script src="js/jszip.min.js"></script>
+    <script src="js/pdf.js"></script>
+</body>
+
+</html>
