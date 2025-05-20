@@ -16,7 +16,7 @@
             </div>
             <p class="tagline">一站式解决您的所有媒体处理需求 - 简单、高效、专业</p>
         </header>
-        
+
         <!-- 工具分类导航 -->
         <nav class="category-nav">
             <button class="category-btn active">全部工具</button>
@@ -24,8 +24,9 @@
             <button class="category-btn">视频处理</button>
             <button class="category-btn">音频处理</button>
             <button class="category-btn">文档转换</button>
+            <button class="category-btn">文件压缩</button>
         </nav>
-        
+
         <!-- 工具卡片网格 -->
         <div class="tools-grid">
             <!-- 图片工具 -->
@@ -44,7 +45,7 @@
                     </div>
                 </div>
             </a>
-            
+
             <!-- 视频工具 -->
             <a href="vido-resizer.html" class="tool-card video">
                 <div class="tool-card-header">
@@ -61,8 +62,8 @@
                     </div>
                 </div>
             </a>
-            
-            <!-- 预留位置 - 未来可添加的音频工具 -->
+
+            <!-- 音频工具 -->
             <a href="audio-converter.html" class="tool-card audio">
                 <div class="tool-card-header">
                     <div class="tool-icon">
@@ -78,8 +79,8 @@
                     </div>
                 </div>
             </a>
-            
-            <!-- 预留位置 - 未来可添加的PDF工具 -->
+
+            <!-- PDF工具 -->
             <a href="pdf-tools.html" class="tool-card document">
                 <div class="tool-card-header">
                     <div class="tool-icon">
@@ -95,8 +96,8 @@
                     </div>
                 </div>
             </a>
-            
-            <!-- 预留位置 - 未来可添加的压缩工具 -->
+
+            <!-- 压缩工具 -->
             <a href="archive-tools.html" class="tool-card archive">
                 <div class="tool-card-header">
                     <div class="tool-icon">
@@ -107,42 +108,60 @@
                 <div class="tool-card-body">
                     <p class="tool-description">文件压缩与解压，支持ZIP、RAR、7Z等多种压缩格式</p>
                     <div class="tool-meta">
+                        <span><i class="fas fa-box-open"></i> 极速处理</span>
+                        <span><i class="fas fa-bell"></i> 热门工具</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- AI工具集合 -->
+            <a href="AI-tools.html" class="tool-card AI">
+                <div class="tool-card-header">
+                    <div class="tool-icon">
+                        <i class="fas fa-file-archive"></i>
+                    </div>
+                    <h3 class="tool-title">AI工具集合 <span class="new-badge">COMING</span></h3>
+                </div>
+                <div class="tool-card-body">
+                    <p class="tool-description">文件压缩与解压，支持ZIP、RAR、7Z等多种压缩格式</p>
+                    <div class="tool-meta">
                         <span><i class="fas fa-box-open"></i> 即将上线</span>
                         <span><i class="fas fa-bell"></i> 敬请期待</span>
                     </div>
                 </div>
             </a>
+
         </div>
-        
+
         <footer>
             <p>© 2023 媒体工具中心 | 持续更新中 | <a href="about.html" style="color: var(--primary);">关于我们</a></p>
         </footer>
     </div>
-    
+
     <script>
         // 简单的分类筛选功能
         document.addEventListener('DOMContentLoaded', function() {
             const categoryBtns = document.querySelectorAll('.category-btn');
             const toolCards = document.querySelectorAll('.tool-card');
-            
+
             categoryBtns.forEach(btn => {
                 btn.addEventListener('click', function() {
                     // 更新活动按钮样式
                     categoryBtns.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
-                    
+
                     const category = this.textContent.trim();
-                    
+
                     // 筛选工具卡片
                     toolCards.forEach(card => {
                         if (category === '全部工具') {
                             card.style.display = 'flex';
                         } else {
                             const cardCategory = card.classList.contains('image') ? '图片处理' :
-                                                card.classList.contains('video') ? '视频处理' :
-                                                card.classList.contains('audio') ? '音频处理' :
-                                                card.classList.contains('document') ? '文档转换' : '';
-                            
+                                                 card.classList.contains('video') ? '视频处理' :
+                                                 card.classList.contains('audio') ? '音频处理' :
+                                                 card.classList.contains('document') ? '文档转换' :
+                                                 card.classList.contains('archive') ? '文件压缩' : '';
                             if (cardCategory === category) {
                                 card.style.display = 'flex';
                             } else {
@@ -152,7 +171,7 @@
                     });
                 });
             });
-            
+
             // 可以在这里添加更多交互功能
             console.log('媒体工具中心已加载，欢迎使用！');
         });
