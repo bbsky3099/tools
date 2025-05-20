@@ -25,6 +25,7 @@
             <button class="category-btn">音频处理</button>
             <button class="category-btn">文档转换</button>
             <button class="category-btn">文件压缩</button>
+            <button class="category-btn">AI工具</button>
         </nav>
 
         <!-- 工具卡片网格 -->
@@ -115,17 +116,17 @@
             </a>
 
             <!-- AI工具集合 -->
-            <a href="AI-tools.html" class="tool-card AI">
+            <a href="AI-tools.html" class="tool-card ai">
                 <div class="tool-card-header">
                     <div class="tool-icon">
-                        <i class="fas fa-file-archive"></i>
+                        <i class="fas fa-robot"></i>
                     </div>
                     <h3 class="tool-title">AI工具集合 <span class="new-badge">COMING</span></h3>
                 </div>
                 <div class="tool-card-body">
-                    <p class="tool-description">文件压缩与解压，支持ZIP、RAR、7Z等多种压缩格式</p>
+                    <p class="tool-description">提供先进的AI图像生成、视频编辑、音频处理等工具，让您的媒体创作更智能。</p>
                     <div class="tool-meta">
-                        <span><i class="fas fa-box-open"></i> 即将上线</span>
+                        <span><i class="fas fa-rocket"></i> 即将上线</span>
                         <span><i class="fas fa-bell"></i> 敬请期待</span>
                     </div>
                 </div>
@@ -140,12 +141,12 @@
 
     <script>
         // 简单的分类筛选功能
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const categoryBtns = document.querySelectorAll('.category-btn');
             const toolCards = document.querySelectorAll('.tool-card');
 
             categoryBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function () {
                     // 更新活动按钮样式
                     categoryBtns.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
@@ -158,10 +159,11 @@
                             card.style.display = 'flex';
                         } else {
                             const cardCategory = card.classList.contains('image') ? '图片处理' :
-                                                 card.classList.contains('video') ? '视频处理' :
-                                                 card.classList.contains('audio') ? '音频处理' :
-                                                 card.classList.contains('document') ? '文档转换' :
-                                                 card.classList.contains('archive') ? '文件压缩' : '';
+                                card.classList.contains('video') ? '视频处理' :
+                                    card.classList.contains('audio') ? '音频处理' :
+                                        card.classList.contains('document') ? '文档转换' :
+                                            card.classList.contains('archive') ? '文件压缩' :
+                                                card.classList.contains('ai') ? 'AI工具' : '';
                             if (cardCategory === category) {
                                 card.style.display = 'flex';
                             } else {
