@@ -34,11 +34,11 @@ async function initFFmpeg() {
   
   try {
     // 导入 FFmpeg.wasm
-    const { createFFmpeg, fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.2/dist/ffmpeg.min.js');
+    const { createFFmpeg, fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js');
     
     ffmpeg = createFFmpeg({ 
       log: true,
-      corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.2/dist/ffmpeg-core.js'
+      corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg-core.js'
     });
     
     await ffmpeg.load();
@@ -601,4 +601,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             `;
             document.head.appendChild(style);
+
+    // 添加全部工具按钮
+    const allToolsButton = document.createElement('button');
+    allToolsButton.textContent = '全部工具';
+    allToolsButton.style.position = 'fixed';
+    allToolsButton.style.bottom = '20px';
+    // 调整位置，使其在暗黑模式按钮左边
+    allToolsButton.style.right = '160px'; 
+    allToolsButton.style.zIndex = '1000';
+    allToolsButton.style.padding = '8px 16px';
+    allToolsButton.style.borderRadius = '20px';
+    allToolsButton.style.backgroundColor = '#333';
+    allToolsButton.style.color = 'white';
+    allToolsButton.style.border = 'none';
+    allToolsButton.style.cursor = 'pointer';
+    allToolsButton.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    document.body.appendChild(allToolsButton);
+
+    // 绑定点击事件，跳转至 index.html
+    allToolsButton.addEventListener('click', function() {
+        window.location.href = 'index.html';
+    });
 });

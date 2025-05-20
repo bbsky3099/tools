@@ -1,10 +1,12 @@
+
+
+document.addEventListener('DOMContentLoaded', function () {
 // 检查 JSZip 是否加载成功
 const zipAvailable = typeof JSZip !== 'undefined';
 if (!zipAvailable) {
     document.getElementById('noZipWarning').style.display = 'block';
 }
 
-document.addEventListener('DOMContentLoaded', function () {
     // 功能说明面板的展开/折叠功能
     const instructionsToggle = document.getElementById('instructionsToggle');
     const instructionsContent = document.getElementById('instructionsContent');
@@ -520,84 +522,111 @@ document.addEventListener('DOMContentLoaded', function () {
     downloadAllBtn.addEventListener('click', downloadAllFiles);
     clearAllBtn.addEventListener('click', clearAllFiles);
 
-            // 添加黑暗模式切换
-            const darkModeToggle = document.createElement('button');
-            darkModeToggle.textContent = '🌙 黑暗模式';
-            darkModeToggle.style.position = 'fixed';
-            darkModeToggle.style.bottom = '20px';
-            darkModeToggle.style.right = '20px';
-            darkModeToggle.style.zIndex = '1000';
-            darkModeToggle.style.padding = '8px 16px';
-            darkModeToggle.style.borderRadius = '20px';
-            darkModeToggle.style.backgroundColor = '#333';
-            darkModeToggle.style.color = 'white';
-            darkModeToggle.style.border = 'none';
-            darkModeToggle.style.cursor = 'pointer';
-            darkModeToggle.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-            document.body.appendChild(darkModeToggle);
+    // 添加黑暗模式切换
+    const darkModeToggle = document.createElement('button');
+    darkModeToggle.textContent = '🌙 黑暗模式';
+    darkModeToggle.style.position = 'fixed';
+    darkModeToggle.style.bottom = '20px';
+    darkModeToggle.style.right = '20px';
+    darkModeToggle.style.zIndex = '1000';
+    darkModeToggle.style.padding = '8px 16px';
+    darkModeToggle.style.borderRadius = '20px';
+    darkModeToggle.style.backgroundColor = '#333';
+    darkModeToggle.style.color = 'white';
+    darkModeToggle.style.border = 'none';
+    darkModeToggle.style.cursor = 'pointer';
+    darkModeToggle.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    document.body.appendChild(darkModeToggle);
 
-            let darkMode = false;
-            darkModeToggle.addEventListener('click', function() {
-                darkMode = !darkMode;
-                document.body.classList.toggle('dark-mode', darkMode);
-                this.textContent = darkMode ? '☀️ 明亮模式' : '🌙 黑暗模式';
-                this.style.backgroundColor = darkMode ? '#fff' : '#333';
-                this.style.color = darkMode ? '#333' : '#fff';
-            });
+    let darkMode = false;
+    darkModeToggle.addEventListener('click', function() {
+        darkMode = !darkMode;
+        document.body.classList.toggle('dark-mode', darkMode);
+        this.textContent = darkMode ? '☀️ 明亮模式' : '🌙 黑暗模式';
+        this.style.backgroundColor = darkMode ? '#fff' : '#333';
+        this.style.color = darkMode ? '#333' : '#fff';
+    });
 
-            // 添加黑暗模式样式
-            const style = document.createElement('style');
-            style.textContent = `
-                .dark-mode {
-                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-                    color: #f0f0f0;
-                }
-                .dark-mode .container {
-                    background-color: #2d2d2d;
-                    border-color: #444;
-                }
-                .dark-mode .upload-area {
-                    background-color: #333;
-                    border-color: #444;
-                }
-                .dark-mode .instructions {
-                    border-color: #444;
-                }
-                .dark-mode .instructions-header {
-                    background: linear-gradient(to right, #333, #444);
-                    color: #f0f0f0;
-                }
-                .dark-mode .instructions-content {
-                    background-color: #333;
-                }
-                .dark-mode .image-card {
-                    background-color: #333;
-                    border-color: #444;
-                }
-                .dark-mode input, .dark-mode select {
-                    background-color: #444;
-                    color: #f0f0f0;
-                    border-color: #555;
-                }
-                .dark-mode label {
-                    color: #f0f0f0;
-                }
-                .dark-mode button {
-                    background-color: #444;
-                    color: #f0f0f0;
-                }
-                .dark-mode button:hover {
-                    background-color: #555;
-                }
-                .dark-mode .progress-bar {
-                    background-color: #555;
-                }
-                .dark-mode .progress {
-                    background: linear-gradient(to right, #3498db, #2ecc71);
-                }
-                .dark-mode .status {
-                    color: #f0f0f0;
-                }
-            `;
-            document.head.appendChild(style);
+    // 添加黑暗模式样式
+    const style = document.createElement('style');
+    style.textContent = `
+        .dark-mode {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #f0f0f0;
+        }
+        .dark-mode .container {
+            background-color: #2d2d2d;
+            border-color: #444;
+        }
+        .dark-mode .upload-area {
+            background-color: #333;
+            border-color: #444;
+        }
+        .dark-mode .instructions {
+            border-color: #444;
+        }
+        .dark-mode .instructions-header {
+            background: linear-gradient(to right, #333, #444);
+            color: #f0f0f0;
+        }
+        .dark-mode .instructions-content {
+            background-color: #333;
+        }
+        .dark-mode .image-card {
+            background-color: #333;
+            border-color: #444;
+        }
+        .dark-mode input, .dark-mode select {
+            background-color: #444;
+            color: #f0f0f0;
+            border-color: #555;
+        }
+        .dark-mode label {
+            color: #f0f0f0;
+        }
+        .dark-mode button {
+            background-color: #444;
+            color: #f0f0f0;
+        }
+        .dark-mode button:hover {
+            background-color: #555;
+        }
+        .dark-mode .progress-bar {
+            background-color: #555;
+        }
+        .dark-mode .progress {
+            background: linear-gradient(to right, #3498db, #2ecc71);
+        }
+        .dark-mode .status {
+            color: #f0f0f0;
+        }
+    `;
+
+    // ==================== 修复：按钮创建代码移至此处 ====================
+    // 添加全部工具按钮
+    console.log('开始创建全部工具按钮');
+    const allToolsButton = document.createElement('button');
+    allToolsButton.textContent = '全部工具';
+    allToolsButton.style.position = 'fixed';
+    allToolsButton.style.bottom = '20px';
+    allToolsButton.style.right = '160px'; 
+    allToolsButton.style.zIndex = '1000';
+    allToolsButton.style.padding = '8px 16px';
+    allToolsButton.style.borderRadius = '20px';
+    allToolsButton.style.backgroundColor = '#333';
+    allToolsButton.style.color = 'white';
+    allToolsButton.style.border = 'none';
+    allToolsButton.style.cursor = 'pointer';
+    allToolsButton.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    document.body.appendChild(allToolsButton);
+    console.log('全部工具按钮已创建并添加到页面中', allToolsButton);
+
+    // 绑定点击事件，跳转至 index.html
+    allToolsButton.addEventListener('click', function() {
+        window.location.href = 'index.html';
+    });
+    // ==================== 修复结束 ====================
+    document.head.appendChild(style);
+
+
 });

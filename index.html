@@ -139,44 +139,7 @@
         </footer>
     </div>
 
-    <script>
-        // 简单的分类筛选功能
-        document.addEventListener('DOMContentLoaded', function () {
-            const categoryBtns = document.querySelectorAll('.category-btn');
-            const toolCards = document.querySelectorAll('.tool-card');
+    <script src="js/index.js"></script>
 
-            categoryBtns.forEach(btn => {
-                btn.addEventListener('click', function () {
-                    // 更新活动按钮样式
-                    categoryBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-
-                    const category = this.textContent.trim();
-
-                    // 筛选工具卡片
-                    toolCards.forEach(card => {
-                        if (category === '全部工具') {
-                            card.style.display = 'flex';
-                        } else {
-                            const cardCategory = card.classList.contains('image') ? '图片处理' :
-                                card.classList.contains('video') ? '视频处理' :
-                                    card.classList.contains('audio') ? '音频处理' :
-                                        card.classList.contains('document') ? '文档转换' :
-                                            card.classList.contains('archive') ? '文件压缩' :
-                                                card.classList.contains('ai') ? 'AI工具' : '';
-                            if (cardCategory === category) {
-                                card.style.display = 'flex';
-                            } else {
-                                card.style.display = 'none';
-                            }
-                        }
-                    });
-                });
-            });
-
-            // 可以在这里添加更多交互功能
-            console.log('媒体工具中心已加载，欢迎使用！');
-        });
-    </script>
 </body>
 </html>
