@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频格式转换及剪辑工具</title>
+    <link rel="stylesheet" href="css/audio.css">
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.2/dist/ffmpeg.min.js"></script>
+</head>
+<body>
+    <h1>音频格式转换及剪辑工具</h1>
+    <div class="container">
+        <div id="uploadArea" class="upload-area">
+            <p>点击或拖拽音频到此处上传</p>
+            <p><small>支持单个或多个文件</small></p>
+            <input type="file" id="fileInput" accept="audio/*" multiple style="display: none;">
+        </div>
+
+        <div class="instructions">
+            <div class="instructions-header" id="instructionsToggle">
+                <span>功能说明和使用指南</span>
+                <span>▼</span>
+            </div>
+            <div class="instructions-content" id="instructionsContent">
+                <h3>应用功能</h3>
+                <ul class="instructions-list">
+                    <li><strong>完全本地运行</strong> - 所有处理都在浏览器中完成，不上传服务器</li>
+                    <li><strong>批量处理</strong> - 支持同时上传并处理多个音频</li>
+                    <li><strong>格式转换</strong> - 可将音频转换为 MP3、WAV、AAC 格式</li>
+                    <li><strong>音质调整</strong> - 可调整音频的采样率和比特率</li>
+                    <li><strong>音频剪辑</strong> - 可剪辑音频的指定片段</li>
+                </ul>
+
+                <h3>使用说明</h3>
+                <ol class="instructions-list">
+                    <li><strong>上传音频</strong>：点击上传区域或直接拖拽音频文件到指定区域</li>
+                    <li><strong>设置参数</strong>：
+                        <ul>
+                            <li>选择输出格式：MP3、WAV 或 AAC</li>
+                            <li>设置采样率和比特率（可选）</li>
+                            <li>设置剪辑的起始和结束时间（可选）</li>
+                        </ul>
+                    </li>
+                    <li><strong>处理音频</strong>：
+                        <ul>
+                            <li>点击单个音频的"转换"按钮处理单个音频</li>
+                            <li>点击"转换所有音频"按钮批量处理所有上传音频</li>
+                        </ul>
+                    </li>
+                    <li><strong>下载音频</strong>：
+                        <ul>
+                            <li>点击单个音频的"下载"按钮下载单个音频</li>
+                            <li>点击"下载所有音频"按钮打包下载所有处理后的音频</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="sampleRateInput">采样率 (Hz)</label>
+                <input type="number" id="sampleRateInput" placeholder="默认" min="8000">
+            </div>
+            <div class="control-group">
+                <label for="bitRateInput">比特率 (kbps)</label>
+                <input type="number" id="bitRateInput" placeholder="默认" min="32">
+            </div>
+            <div class="control-group">
+                <label for="startTimeInput">起始时间 (秒)</label>
+                <input type="number" id="startTimeInput" placeholder="0">
+            </div>
+            <div class="control-group">
+                <label for="endTimeInput">结束时间 (秒)</label>
+                <input type="number" id="endTimeInput" placeholder="音频结束">
+            </div>
+            <div class="control-group">
+                <label for="formatSelect">输出格式</label>
+                <select id="formatSelect">
+                    <option value="mp3">MP3</option>
+                    <option value="wav">WAV</option>
+                    <option value="aac">AAC</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="convertAllBtn" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                    <path d="M21 3H3v18h18V3z"></path>
+                    <path d="M21 12H9"></path>
+                    <path d="M12 3v18"></path>
+                </svg>
+                转换所有音频
+            </button>
+            <button id="downloadAllBtn" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                下载所有音频
+            </button>
+            <button id="clearAllBtn" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                清除所有音频
+            </button>
+        </div>
+
+        <div class="progress-container" style="display: none;">
+            <div class="status">正在处理...</div>
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+        </div>
+
+        <div class="status" id="statusText">准备就绪，请上传音频</div>
+        <div id="noZipWarning" class="no-zip-warning">
+            警告: JSZip 库未找到，批量下载将逐个下载音频
+        </div>
+
+        <div id="previewContainer" class="preview-container"></div>
+    </div>
+
+    <!-- 本地加载 JSZip 库 -->
+    <script src="js/jszip.min.js"></script>
+    <script src="js/audio.js"></script>
+</body>
+</html>
