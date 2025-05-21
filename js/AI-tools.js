@@ -25,6 +25,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    // 为每个工具卡片添加点击事件监听器
+    toolCards.forEach(card => {
+        card.addEventListener('click', function () {
+            this.style.display = 'none';
+        });
+    });
 });
 
 // ==================== 响应式按钮组 ====================
