@@ -28,7 +28,7 @@ Object.assign(darkModeToggle.style, {
 
 // 全部工具按钮
 const allToolsButton = document.createElement('button');
-allToolsButton.textContent = '全部工具';
+allToolsButton.textContent = '首页';
 Object.assign(allToolsButton.style, {
     padding: '8px 16px',
     borderRadius: '20px',

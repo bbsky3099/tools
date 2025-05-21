@@ -49,6 +49,11 @@ body {
     line-height: 1.6;
 }
 
+.dark-mode {
+    background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    color: #f0f0f0;
+}
+
 /* 布局容器 */
 .container {
     width: 100%;
@@ -131,6 +136,7 @@ header {
     color: inherit;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
 }
 
 .tool-card:hover {
@@ -208,6 +214,62 @@ header {
     --card-color: #9d4edd;
 }
 
+/* 工具功能区域样式 */
+.tool-section {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    box-shadow: var(--shadow);
+    display: none;
+}
+
+.tool-section h2 {
+    margin-bottom: var(--spacing);
+    color: var(--primary-dark);
+    border-bottom: 2px solid var(--primary-light);
+    padding-bottom: 0.5rem;
+}
+
+.tool-section input,
+.tool-section textarea,
+.tool-section select {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--gray-light);
+    border-radius: var(--radius);
+    font-size: 1rem;
+}
+
+.tool-section button {
+    padding: 0.8rem 1.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.tool-section button:hover {
+    background: var(--primary-dark);
+}
+
+#image-result,
+#video-result,
+#audio-result,
+#text-result,
+#data-result,
+#code-result {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--light);
+    border-radius: var(--radius);
+    min-height: 150px;
+}
+
 /* 页脚样式 */
 footer {
     text-align: center;
@@ -225,6 +287,10 @@ footer {
     .logo {
         font-size: 2rem;
     }
+    
+    .tool-section {
+        padding: var(--spacing);
+    }
 }
 
 @media (max-width: 480px) {
@@ -235,6 +301,13 @@ footer {
     .category-nav {
         flex-direction: column;
         align-items: center;
+    }
+    
+    .tool-section input,
+    .tool-section textarea,
+    .tool-section select {
+        padding: 0.6rem;
+        font-size: 0.9rem;
     }
 }
 
@@ -254,4 +327,59 @@ footer {
     0% { transform: scale(1); }
     50% { transform: scale(1.1); }
     100% { transform: scale(1); }
+}
+
+/* 功能区按钮组 */
+.button-group {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+    gap: 1rem;
+}
+
+.button-group button {
+    padding: 0.8rem 1.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.button-group button:hover {
+    background: var(--primary-dark);
+}
+
+/* 黑暗模式下工具区域样式 */
+.dark-mode .tool-section {
+    background: #2d2d2d;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .tool-section input,
+.dark-mode .tool-section textarea,
+.dark-mode .tool-section select {
+    background: #444;
+    color: #fff;
+    border-color: #555;
+}
+
+.dark-mode .tool-section button {
+    background: var(--primary);
+}
+
+.dark-mode .tool-section button:hover {
+    background: var(--primary-dark);
+}
+
+.dark-mode #image-result,
+.dark-mode #video-result,
+.dark-mode #audio-result,
+.dark-mode #text-result,
+.dark-mode #data-result,
+.dark-mode #code-result {
+    background: #444;
+    color: #fff;
 }
