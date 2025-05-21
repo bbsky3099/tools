@@ -516,183 +516,159 @@ document.addEventListener('DOMContentLoaded', function() {
         }, mimeType, qualityParam); // 使用质量参数
     };
     
-    // 添加黑暗模式切换
-    const darkModeToggle = document.createElement('button');
-    darkModeToggle.textContent = '🌙 黑暗模式';
-    darkModeToggle.style.position = 'fixed';
-    darkModeToggle.style.bottom = '20px';
-    darkModeToggle.style.right = '20px';
-    darkModeToggle.style.zIndex = '1000';
-    darkModeToggle.style.padding = '8px 16px';
-    darkModeToggle.style.borderRadius = '20px';
-    darkModeToggle.style.backgroundColor = '#333';
-    darkModeToggle.style.color = 'white';
-    darkModeToggle.style.border = 'none';
-    darkModeToggle.style.cursor = 'pointer';
-    darkModeToggle.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-    document.body.appendChild(darkModeToggle);
+// ==================== 响应式按钮组 ====================
+// 创建按钮容器
+const buttonGroup = document.createElement('div');
+Object.assign(buttonGroup.style, {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    zIndex: '1000',
+    display: 'flex',
+    gap: '15px',
+    transition: 'all 0.3s ease'
+});
+
+// 黑暗模式切换按钮
+const darkModeToggle = document.createElement('button');
+darkModeToggle.textContent = '🌙 黑暗模式';
+Object.assign(darkModeToggle.style, {
+    padding: '8px 16px',
+    borderRadius: '20px',
+    backgroundColor: '#333',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.3s ease'
+});
+
+// 全部工具按钮
+const allToolsButton = document.createElement('button');
+allToolsButton.textContent = '全部工具';
+Object.assign(allToolsButton.style, {
+    padding: '8px 16px',
+    borderRadius: '20px',
+    backgroundColor: '#333',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.3s ease'
+});
+
+// 响应式布局函数
+const updateButtonLayout = () => {
+    const isMobile = window.innerWidth <= 768;
     
-    let darkMode = false;
-    darkModeToggle.addEventListener('click', function() {
-        darkMode = !darkMode;
-        document.body.classList.toggle('dark-mode', darkMode);
-        this.textContent = darkMode ? '☀️ 明亮模式' : '🌙 黑暗模式';
-        this.style.backgroundColor = darkMode ? '#fff' : '#333';
-        this.style.color = darkMode ? '#333' : '#fff';
+    if (isMobile) {
+        // 移动端布局
+        buttonGroup.style.flexDirection = 'column-reverse';
+        buttonGroup.style.alignItems = 'flex-end';
+        buttonGroup.style.bottom = '10px';
+        buttonGroup.style.right = '10px';
+        buttonGroup.style.gap = '10px';
+        
+        // 按钮尺寸调整
+        [darkModeToggle, allToolsButton].forEach(btn => {
+            btn.style.padding = '6px 12px';
+            btn.style.fontSize = '14px';
+        });
+    } else {
+        // 桌面端布局
+        buttonGroup.style.flexDirection = 'row';
+        buttonGroup.style.bottom = '20px';
+        buttonGroup.style.right = '20px';
+        buttonGroup.style.gap = '15px';
+        
+        // 恢复默认尺寸
+        [darkModeToggle, allToolsButton].forEach(btn => {
+            btn.style.padding = '8px 16px';
+            btn.style.fontSize = '16px';
+        });
+    }
+};
+
+// 初始化布局
+updateButtonLayout();
+window.addEventListener('resize', updateButtonLayout);
+
+// 添加按钮到容器
+buttonGroup.appendChild(allToolsButton);
+buttonGroup.appendChild(darkModeToggle);
+document.body.appendChild(buttonGroup);
+
+// ==================== 黑暗模式功能 ====================
+let darkMode = false;
+darkModeToggle.addEventListener('click', function() {
+    darkMode = !darkMode;
+    document.body.classList.toggle('dark-mode', darkMode);
+    
+    // 动态更新按钮样式
+    this.textContent = darkMode ? '☀️ 明亮模式' : '🌙 黑暗模式';
+    this.style.backgroundColor = darkMode ? '#fff' : '#333';
+    this.style.color = darkMode ? '#333' : '#fff';
+    
+    // 同步全部工具按钮样式
+    allToolsButton.style.backgroundColor = darkMode ? '#444' : '#333';
+    allToolsButton.style.color = darkMode ? '#eee' : '#fff';
+});
+
+// ==================== 黑暗模式全局样式 ====================
+const darkModeStyles = document.createElement('style');
+darkModeStyles.textContent = `
+.dark-mode {
+    background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    color: #f0f0f0;
+}
+
+.dark-mode .container {
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+}
+
+.dark-mode input,
+.dark-mode select,
+.dark-mode button:not(.dark-mode-toggle) {
+    background-color: #444;
+    color: #fff;
+    border-color: #555;
+}
+
+.dark-mode .progress-bar {
+    background-color: #555;
+}
+
+@media (max-width: 768px) {
+    .dark-mode .button-group {
+        background: rgba(40, 40, 40, 0.9);
+        backdrop-filter: blur(5px);
+    }
+}
+`;
+document.head.appendChild(darkModeStyles);
+
+// ==================== 全部工具按钮功能 ====================
+allToolsButton.addEventListener('click', () => {
+    window.location.href = 'index.html';
+});
+
+// ==================== 触摸优化 ====================
+// 添加触摸反馈
+[allToolsButton, darkModeToggle].forEach(btn => {
+    btn.addEventListener('touchstart', () => {
+        btn.style.transform = 'scale(0.95)';
     });
     
-    // 添加黑暗模式样式
-    const style = document.createElement('style');
-    style.textContent = `
-        .dark-mode {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            color: #f0f0f0;
-        }
-        .dark-mode .container {
-            background-color: #2d2d2d;
-            border-color: #444;
-        }
-        .dark-mode .upload-area {
-            background-color: #333;
-            border-color: #444;
-        }
-        .dark-mode .instructions {
-            border-color: #444;
-        }
-        .dark-mode .instructions-header {
-            background: linear-gradient(to right, #333, #444);
-            color: #f0f0f0;
-        }
-        .dark-mode .instructions-content {
-            background-color: #333;
-        }
-        .dark-mode .image-card {
-            background-color: #333;
-            border-color: #444;
-        }
-        .dark-mode input, .dark-mode select {
-            background-color: #444;
-            color: #f0f0f0;
-            border-color: #555;
-        }
-        .dark-mode label {
-            color: #f0f0f0;
-        }
-    `;
-    document.head.appendChild(style);
-    
-    // 添加图片旋转功能
-    const rotateControl = document.createElement('div');
-    rotateControl.innerHTML = `
-        <label for="rotateSelect">旋转角度</label>
-        <select id="rotateSelect" style="margin-top: 5px;">
-            <option value="0">0°</option>
-            <option value="90">90°</option>
-            <option value="180">180°</option>
-            <option value="270">270°</option>
-        </select>
-    `;
-    document.querySelector('.controls').appendChild(rotateControl);
-    
-    // 修改resizeSingleImage函数以支持旋转
-    const rotateSelect = document.getElementById('rotateSelect');
-    const originalResizeWithRotation = resizeSingleImage;
-    resizeSingleImage = function(index) {
-        const rotation = parseInt(rotateSelect.value);
-        const image = images[index];
-        
-        if (rotation === 0) {
-            return originalResizeWithRotation.call(this, index);
-        }
-        
-        // 处理旋转逻辑
-        const width = parseInt(widthInput.value) || image.originalWidth;
-        const height = parseInt(heightInput.value) || image.originalHeight;
-        const method = resizeMethod.value;
-        const format = formatSelect.value;
-        const quality = parseFloat(qualityInput.value);
-        
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // 根据旋转角度调整画布尺寸
-        if (rotation === 90 || rotation === 270) {
-            canvas.width = height;
-            canvas.height = width;
-        } else {
-            canvas.width = width;
-            canvas.height = height;
-        }
-        
-        // 旋转并绘制图像
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(rotation * Math.PI / 180);
-        
-        // 计算绘制位置和尺寸
-        let drawWidth, drawHeight;
-        if (rotation === 90 || rotation === 270) {
-            drawWidth = height;
-            drawHeight = width;
-        } else {
-            drawWidth = width;
-            drawHeight = height;
-        }
-        
-        ctx.drawImage(image.element, -drawWidth/2, -drawHeight/2, drawWidth, drawHeight);
-        
-        // 获取新图像数据
-        let mimeType = image.file.type;
-        let fileExtension = image.file.name.split('.').pop().toLowerCase();
-        
-        if (format !== 'original') {
-            mimeType = `image/${format}`;
-            fileExtension = format;
-        }
-        
-        const qualityParam = (format === 'jpeg' || format === 'webp') ? quality : undefined;
-        
-        canvas.toBlob(blob => {
-            const newDataUrl = URL.createObjectURL(blob);
-            
-            // 更新图像数据
-            image.resizedData = newDataUrl;
-            image.resizedWidth = canvas.width;
-            image.resizedHeight = canvas.height;
-            image.resizedFile = new File([blob], 
-                `${image.file.name.replace(/\.[^/.]+$/, '')}_${rotation}deg_${canvas.width}x${canvas.height}.${fileExtension}`, 
-                { type: mimeType });
-            
-            // 更新预览
-            const previewImg = previewContainer.querySelectorAll('.image-preview')[index];
-            previewImg.src = newDataUrl;
-            
-            // 更新尺寸信息
-            const sizeInfo = previewContainer.querySelectorAll('.image-size')[index];
-            sizeInfo.textContent = `${canvas.width}×${canvas.height} - ${formatFileSize(blob.size)} (旋转 ${rotation}°)`;
-            
-            statusText.textContent = `图片 "${image.file.name}" 已调整为 ${canvas.width}×${canvas.height} 并旋转 ${rotation}°`;
-        }, mimeType, qualityParam);
-    };
-
-    // 添加全部工具按钮
-    const allToolsButton = document.createElement('button');
-    allToolsButton.textContent = '全部工具';
-    allToolsButton.style.position = 'fixed';
-    allToolsButton.style.bottom = '20px';
-    // 调整位置，使其在暗黑模式按钮左边
-    allToolsButton.style.right = '160px'; 
-    allToolsButton.style.zIndex = '1000';
-    allToolsButton.style.padding = '8px 16px';
-    allToolsButton.style.borderRadius = '20px';
-    allToolsButton.style.backgroundColor = '#333';
-    allToolsButton.style.color = 'white';
-    allToolsButton.style.border = 'none';
-    allToolsButton.style.cursor = 'pointer';
-    allToolsButton.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-    document.body.appendChild(allToolsButton);
-
-    // 绑定点击事件，跳转至 index.html
-    allToolsButton.addEventListener('click', function() {
-        window.location.href = 'index.html';
+    btn.addEventListener('touchend', () => {
+        btn.style.transform = 'scale(1)';
     });
+});
+
+// ==================== 无障碍优化 ====================
+allToolsButton.setAttribute('aria-label', '返回全部工具页面');
+darkModeToggle.setAttribute('aria-label', '切换黑暗模式');
+buttonGroup.setAttribute('role', 'toolbar');
 });
