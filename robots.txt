@@ -1,0 +1,29 @@
+# 国际搜索引擎
+User-agent: Googlebot
+Allow: /
+User-agent: Bingbot
+Allow: /
+User-agent: DuckDuckBot
+Allow: /
+User-agent: YandexBot
+Allow: /
+
+# 国内搜索引擎
+User-agent: Baiduspider
+Allow: /
+User-agent: 360Spider
+Allow: /
+User-agent: Sogou web spider
+Allow: /
+User-agent: Bytespider
+Allow: /
+User-agent: YisouSpider      # 神马搜索（按需添加）
+Allow: /
+
+# 禁止其他所有爬虫
+User-agent: *
+Disallow: /
+
+# 辅助配置
+Crawl-delay: 5
+Sitemap: https://bbsky3099.github.io/tools/sitemap.xml

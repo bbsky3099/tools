@@ -1,0 +1,19 @@
+# 敏感目录
+/admin/
+/config/
+/tmp/
+/backups/
+/js/
+/css/
+
+# 敏感文件
+*.env
+*.key
+*.log
+*.sql
+*.bak
+
+# 开发环境文件
+node_modules/
+.DS_Store
+.idea/

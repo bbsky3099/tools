@@ -257,3 +257,50 @@
         .tool-card.ai {
             --card-color: #9d4edd;
         }
+
+/* 404 页面专用样式 */
+.error-container {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    margin: 2rem auto;
+    max-width: 600px;
+}
+
+.error-code {
+    font-size: 8rem;
+    color: var(--primary);
+    font-weight: 900;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.error-title {
+    color: var(--text-color);
+    margin: 1rem 0;
+}
+
+.error-description {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.error-btn {
+    background: var(--primary);
+    color: white;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: transform 0.2s;
+}
+
+.error-btn:hover {
+    transform: translateY(-2px);
+}

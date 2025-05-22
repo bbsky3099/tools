@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="sitemap.xsl"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <!-- 首页 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/index.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <!-- 关于我们页面 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/about.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <!-- 404页面 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/404.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.2</priority>
+    </url>
+    <!-- 图片处理工具页面 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/image-resizer.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <!-- 视频处理工具页面 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/vido-resizer.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <!-- 音频转换工具页面 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/audio-converter.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <!-- 文档处理工具页面 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/pdf-tools.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <!-- 压缩解压工具页面 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/archive-tools.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <!-- AI工具集合页面 -->
+    <url>
+        <loc>https://bbsky3099.github.io/tools/AI-tools.html</loc>
+        <lastmod>2025-05-22</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+</urlset>
