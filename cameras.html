@@ -9238,8 +9238,8 @@
             let stream = null;
             let currentPhotoData = null;
             let photoCount = 0;
-            let imageCapture = null;
             let videoTrack = null;
+            let supportsFocus = false;
             
             // 初始化摄像头
             async function initCamera() {
@@ -9260,9 +9260,13 @@
                     // 获取视频轨道
                     videoTrack = stream.getVideoTracks()[0];
                     
-                    // 创建ImageCapture对象
-                    if (window.ImageCapture) {
-                        imageCapture = new ImageCapture(videoTrack);
+                    // 检查设备是否支持对焦功能
+                    if (videoTrack && videoTrack.getCapabilities) {
+                        const capabilities = videoTrack.getCapabilities();
+                        supportsFocus = capabilities.focusMode && capabilities.focusMode.length > 0;
+                    }
+                    
+                    if (supportsFocus) {
                         focusIndicator.style.display = 'block';
                     }
                     
@@ -9343,15 +9347,21 @@
                 currentPhotoData = null;
             }
             
-            // 保存照片
+            // 保存照片 - 修复文件名问题
             function savePhoto() {
                 if (!currentPhotoData) {
                     showStatus('请先拍照', 'error');
                     return;
                 }
                 
-                // 获取文件名 - 修复问题：确保文件名正确传递
-                const filename = fileName.value.trim() || 'photo_' + Date.now();
+                // 确保获取正确的文件名
+                let filename = fileName.value.trim();
+                
+                // 如果文件名为空，使用默认文件名
+                if (!filename) {
+                    filename = 'photo_' + new Date().toISOString().replace(/[:.]/g, '-');
+                }
+                
                 const location = savePath.value || 'downloads';
                 
                 // 获取保存位置名称
@@ -9424,44 +9434,29 @@
             
             // 手动对焦功能
             function manualFocus(event) {
-                if (!imageCapture || !videoTrack) return;
+                if (!videoTrack || !supportsFocus) {
+                    showStatus('您的设备不支持手动对焦', 'error');
+                    return;
+                }
                 
                 // 获取点击位置相对于摄像头的坐标
                 const rect = cameraContainer.getBoundingClientRect();
                 const x = event.clientX - rect.left;
                 const y = event.clientY - rect.top;
                 
-                // 转换为标准化坐标 (0.0 - 1.0)
-                const normalizedX = Math.min(Math.max(x / rect.width, 0), 1);
-                const normalizedY = Math.min(Math.max(y / rect.height, 0), 1);
-                
                 // 显示对焦框
                 focusBox.style.left = (x - 30) + 'px';
                 focusBox.style.top = (y - 30) + 'px';
                 focusBox.classList.add('visible', 'focusing');
                 
-                // 尝试设置对焦点
-                if (videoTrack.getCapabilities().focusMode) {
-                    try {
-                        const capabilities = videoTrack.getCapabilities();
-                        const settings = videoTrack.getSettings();
-                        
-                        // 检查是否支持点对焦
-                        if (capabilities.pointsOfInterest && capabilities.pointsOfInterest.length > 0) {
-                            imageCapture.setOptions({
-                                pointsOfInterest: [{ x: normalizedX, y: normalizedY }]
-                            });
-                        }
-                        
-                        // 尝试设置对焦模式（如果支持）
-                        if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
-                            videoTrack.applyConstraints({
-                                advanced: [{ focusMode: 'manual', focusDistance: 0.5 }]
-                            });
-                        }
-                    } catch (err) {
-                        console.warn('对焦设置失败:', err);
-                    }
+                try {
+                    // 尝试设置对焦模式
+                    videoTrack.applyConstraints({
+                        advanced: [{ focusMode: 'manual', focusDistance: 0.5 }]
+                    });
+                } catch (err) {
+                    console.warn('对焦设置失败:', err);
+                    showStatus('对焦失败: ' + err.message, 'error');
                 }
                 
                 // 隐藏对焦框
@@ -9480,13 +9475,6 @@
             btnCancel.addEventListener('click', cancelPhoto);
             btnSave.addEventListener('click', savePhoto);
             btnDiscard.addEventListener('click', discardPhoto);
-            
-            // 文件名输入框自动生成默认文件名
-            fileName.addEventListener('focus', function() {
-                if (!this.value) {
-                    generateDefaultFilename();
-                }
-            });
             
             // 摄像头区域点击事件（手动对焦）
             cameraContainer.addEventListener('click', manualFocus);
