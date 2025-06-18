@@ -72,6 +72,7 @@
             overflow: hidden;
             margin-bottom: 20px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
         }
         
         #video, #photo {
@@ -282,6 +283,42 @@
         .instructions li {
             margin-bottom: 5px;
             line-height: 1.5;
+        }
+        
+        .focus-box {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,255,0,0.8);
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .focus-box.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .focus-box.focusing {
+            box-shadow: 0 0 10px rgba(0,255,255,0.8);
+        }
+        
+        .focus-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 10;
+            display: none;
         }
         
         @media (max-width: 500px) {
@@ -9102,11 +9139,13 @@
         
         <div class="photo-counter">照片: <span id="photo-count">0</span></div>
         
-        <div class="camera-container">
+        <div class="camera-container" id="camera-container">
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas" style="display: none;"></canvas>
             <img id="photo" alt="拍摄的照片">
             <div class="flash" id="flash"></div>
+            <div class="focus-box" id="focus-box"></div>
+            <div class="focus-indicator" id="focus-indicator">点击画面进行对焦</div>
         </div>
         
         <div class="controls">
@@ -9167,6 +9206,7 @@
                 <li>点击"保存照片"将照片保存到设备</li>
                 <li>在移动设备上，照片将保存到浏览器默认下载位置</li>
                 <li>照片命名建议使用日期时间格式，如：旅行照片_20230617_1430</li>
+                <li><strong>新增功能</strong>：点击画面任意位置进行手动对焦</li>
             </ul>
         </div>
     </div>
@@ -9191,22 +9231,40 @@
             const previewPath = document.getElementById('preview-path');
             const statusDiv = document.getElementById('status');
             const photoCountSpan = document.getElementById('photo-count');
+            const cameraContainer = document.getElementById('camera-container');
+            const focusBox = document.getElementById('focus-box');
+            const focusIndicator = document.getElementById('focus-indicator');
             
             let stream = null;
             let currentPhotoData = null;
             let photoCount = 0;
+            let imageCapture = null;
+            let videoTrack = null;
             
             // 初始化摄像头
             async function initCamera() {
                 try {
                     // 请求摄像头访问权限
                     stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { facingMode: 'environment' }, 
+                        video: { 
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }, 
                         audio: false 
                     });
                     
                     // 将视频流显示在video元素上
                     video.srcObject = stream;
+                    
+                    // 获取视频轨道
+                    videoTrack = stream.getVideoTracks()[0];
+                    
+                    // 创建ImageCapture对象
+                    if (window.ImageCapture) {
+                        imageCapture = new ImageCapture(videoTrack);
+                        focusIndicator.style.display = 'block';
+                    }
                     
                     // 更新按钮状态
                     btnCapture.disabled = false;
@@ -9292,6 +9350,7 @@
                     return;
                 }
                 
+                // 获取文件名 - 修复问题：确保文件名正确传递
                 const filename = fileName.value.trim() || 'photo_' + Date.now();
                 const location = savePath.value || 'downloads';
                 
@@ -9311,7 +9370,9 @@
                     const link = document.createElement('a');
                     link.download = fullFilename;
                     link.href = currentPhotoData;
+                    document.body.appendChild(link);
                     link.click();
+                    document.body.removeChild(link);
                     
                     // 增加照片计数
                     photoCount++;
@@ -9361,6 +9422,58 @@
                 fileName.value = `照片_${dateStr}_${timeStr}`;
             }
             
+            // 手动对焦功能
+            function manualFocus(event) {
+                if (!imageCapture || !videoTrack) return;
+                
+                // 获取点击位置相对于摄像头的坐标
+                const rect = cameraContainer.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                
+                // 转换为标准化坐标 (0.0 - 1.0)
+                const normalizedX = Math.min(Math.max(x / rect.width, 0), 1);
+                const normalizedY = Math.min(Math.max(y / rect.height, 0), 1);
+                
+                // 显示对焦框
+                focusBox.style.left = (x - 30) + 'px';
+                focusBox.style.top = (y - 30) + 'px';
+                focusBox.classList.add('visible', 'focusing');
+                
+                // 尝试设置对焦点
+                if (videoTrack.getCapabilities().focusMode) {
+                    try {
+                        const capabilities = videoTrack.getCapabilities();
+                        const settings = videoTrack.getSettings();
+                        
+                        // 检查是否支持点对焦
+                        if (capabilities.pointsOfInterest && capabilities.pointsOfInterest.length > 0) {
+                            imageCapture.setOptions({
+                                pointsOfInterest: [{ x: normalizedX, y: normalizedY }]
+                            });
+                        }
+                        
+                        // 尝试设置对焦模式（如果支持）
+                        if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
+                            videoTrack.applyConstraints({
+                                advanced: [{ focusMode: 'manual', focusDistance: 0.5 }]
+                            });
+                        }
+                    } catch (err) {
+                        console.warn('对焦设置失败:', err);
+                    }
+                }
+                
+                // 隐藏对焦框
+                setTimeout(() => {
+                    focusBox.classList.remove('focusing');
+                }, 1000);
+                
+                setTimeout(() => {
+                    focusBox.classList.remove('visible');
+                }, 2000);
+            }
+            
             // 事件监听
             btnCapture.addEventListener('click', capturePhoto);
             btnRetake.addEventListener('click', retakePhoto);
@@ -9374,6 +9487,9 @@
                     generateDefaultFilename();
                 }
             });
+            
+            // 摄像头区域点击事件（手动对焦）
+            cameraContainer.addEventListener('click', manualFocus);
             
             // 初始化应用
             initCamera();
